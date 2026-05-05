@@ -10,12 +10,12 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    Logger::instance().init("./logs", LogLevel::DEBUG, true);
+    Logger::instance().init("", LogLevel::DEBUG, true);
 
     DBConfig config;
-    config.dbName = "learn";
-    config.user = "root";
-    config.password = "589520";
+    config.dbName = "";
+    config.user = "";
+    config.password = "";
     DBPool::instance().init(config);
 
     Tree window;
