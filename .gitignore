@@ -1,0 +1,24 @@
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+
+# 编译输出
+x64/
+Debug/
+Release/
+*.exe
+*.pdb
+*.obj
+*.ilk
+*.log
+*.tlog
+
+# Qt 自动生成
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# 运行时日志
+logs/
