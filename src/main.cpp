@@ -12,11 +12,8 @@ int main(int argc, char *argv[])
 
     Logger::instance().init("", LogLevel::DEBUG, true);
 
-    DBConfig config;
-    config.dbName = "";
-    config.user = "";
-    config.password = "";
-    DBPool::instance().init(config);
+    zch::Config::loadFromConfDir("./config");
+    DBPool::instance().init();
 
     Tree window;
     window.show();

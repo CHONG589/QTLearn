@@ -1,5 +1,32 @@
 #include "QDBConn.h"
 
+static zch::ConfigVar<QString>::ptr g_db_ip =
+    zch::Config::lookup("database.ip", QString("127.0.0.1"), "database ip address");
+
+static zch::ConfigVar<int>::ptr g_db_port =
+    zch::Config::lookup("database.port", (int)(3306), "database port");
+
+static zch::ConfigVar<QString>::ptr g_db_user =
+    zch::Config::lookup("database.user", QString(""), "database user");
+
+static zch::ConfigVar<QString>::ptr g_db_pwd =
+    zch::Config::lookup("database.pwd", QString(""), "database passwd");
+
+static zch::ConfigVar<QString>::ptr g_db_driver =
+    zch::Config::lookup("database.driver", QString(""), "database driver");
+
+static zch::ConfigVar<int>::ptr g_db_min_size =
+    zch::Config::lookup("database.minsize", (int)(100), "connectPool min size");
+
+static zch::ConfigVar<int>::ptr g_db_max_size =
+    zch::Config::lookup("database.maxsize", (int)(1024), "connectPool max size");
+
+static zch::ConfigVar<int>::ptr g_db_timeout =
+    zch::Config::lookup("database.timeout", (int)(1000), "connectPool timeout");
+
+static zch::ConfigVar<QString>::ptr g_db_name =
+    zch::Config::lookup("database.db", QString(""), "database name");
+
 // ==================== DBConn ====================
 
 /**
@@ -401,20 +428,16 @@ DBPool &DBPool::instance() {
  *
  *          仅预热调用线程（通常是主线程），
  *          其他工作线程在首次 acquire() 时自动用共享的 m_config 初始化自己的池。
- *
- * @param[in] config 数据库连接参数与池策略
  */
-void DBPool::init(const DBConfig &config) {
+void DBPool::init() {
     // 防重复初始化：已就绪则忽略后续调用
     if (m_ready.loadAcquire()) {
         return;
     }
 
-    m_config = config;
-
     ThreadCtx &ctx = threadCtx();
     QMutexLocker locker(&ctx.mutex);
-    for (int i = 0; i < m_config.minPoolSize; ++i) {
+    for (int i = 0; i < g_db_min_size->getValue(); ++i) {
         QSqlDatabase db = createConnection();
         if (db.isOpen()) {
             ctx.idlePool.enqueue(db);
@@ -488,14 +511,14 @@ DBConn DBPool::acquire() {
         }
 
         // 优先级 2：在本线程创建新连接
-        if (ctx.totalSize < m_config.maxPoolSize) {
+        if (ctx.totalSize < g_db_max_size->getValue()) {
             QSqlDatabase db = createConnection();
             ctx.totalSize++;
             return DBConn(db);
         }
 
         // 优先级 3：等待同线程 release
-        if (!ctx.cond.wait(&ctx.mutex, m_config.timeoutMs)) {
+        if (!ctx.cond.wait(&ctx.mutex, g_db_timeout->getValue())) {
             throw DBException("DBPool acquire timeout");
         }
     }
@@ -552,13 +575,13 @@ void DBPool::release(QSqlDatabase db) {
 QSqlDatabase DBPool::createConnection() {
     QString connName = QUuid::createUuid().toString();
 
-    QSqlDatabase db = QSqlDatabase::addDatabase(m_config.driver, connName);
+    QSqlDatabase db = QSqlDatabase::addDatabase(g_db_driver->getValue(), connName);
 
-    db.setHostName(m_config.host);
-    db.setPort(m_config.port);
-    db.setDatabaseName(m_config.dbName);
-    db.setUserName(m_config.user);
-    db.setPassword(m_config.password);
+    db.setHostName(g_db_ip->getValue());
+    db.setPort(g_db_port->getValue());
+    db.setDatabaseName(g_db_name->getValue());
+    db.setUserName(g_db_user->getValue());
+    db.setPassword(g_db_pwd->getValue());
 
     if (!db.open()) {
         throw DBException("DB open failed: " + db.lastError().text());

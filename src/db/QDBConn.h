@@ -16,34 +16,7 @@
 #include <optional>
 
 #include "../log/QLog.h"
-
-/**
- * @brief 数据库连接配置结构体
- *
- * @details 封装数据库连接参数与连接池策略参数。
- *          所有字段均有默认值，调用方只需按需覆盖。
- */
-struct DBConfig {
-    /// Qt SQL 驱动类型，默认 "QMYSQL"
-    QString driver = "QMYSQL";
-    /// 数据库主机地址，默认 127.0.0.1
-    QString host = "127.0.0.1";
-    /// 端口号，默认 3306
-    int port = 3306;
-    /// 数据库名（无默认值，必须指定）
-    QString dbName;
-    /// 登录用户名（无默认值，必须指定）
-    QString user;
-    /// 登录密码（无默认值，必须指定）
-    QString password;
-
-    /// 连接池最大连接数，默认 20
-    int maxPoolSize = 20;
-    /// 连接池预热连接数（init 时预先创建），默认 5
-    int minPoolSize = 5;
-    /// 获取连接超时时间（毫秒），默认 3000
-    int timeoutMs = 3000;
-};
+#include "../config/config.h"
 
 /**
  * @brief 数据库统一异常类
@@ -347,10 +320,8 @@ public:
      *          重复调用无副作用。
      *          其他线程首次 acquire() 时会自动用已保存的配置初始化自己的池。
      *          必须在任何线程调用 acquire() 之前完成首次 init()。
-     *
-     * @param[in] config 数据库连接参数与池策略参数
      */
-    void init(const DBConfig &config);
+    void init();
 
     /**
      * @brief 从当前线程的连接池获取一个连接
@@ -435,7 +406,6 @@ private:
      */
     static void destroyConnection(QSqlDatabase &db);
 
-    DBConfig m_config;                   /// 数据库配置（init 后只读，所有线程共享）
     QAtomicInt m_ready{0};               /// 是否已完成 init 配置
 
     QThreadStorage<ThreadCtx *> m_threadCtx;  /// 每线程独立池，线程退出时自动回收

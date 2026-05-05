@@ -1,0 +1,10 @@
+database:
+  driver: QMYSQL
+  ip: 127.0.0.1
+  port: 3306
+  user: root
+  pwd: 589520
+  db: learn
+  minsize: 5
+  maxsize: 20
+  timeout: 3000
