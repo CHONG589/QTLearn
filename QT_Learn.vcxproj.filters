@@ -23,36 +23,40 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="Tree.qrc">
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tree\Tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\log\QLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\db\QDBConn.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="src\tree\Tree.qrc">
       <Filter>Resource Files</Filter>
     </QtRcc>
-    <QtUic Include="Tree.ui">
-      <Filter>Form Files</Filter>
-    </QtUic>
-    <QtMoc Include="Tree.h">
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="src\tree\Tree.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <ClCompile Include="Tree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="QDBConn.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="QLog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="src\log\QLog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\db\QDBConn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="QDBConn.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="QLog.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <QtUic Include="src\tree\Tree.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
   </ItemGroup>
 </Project>

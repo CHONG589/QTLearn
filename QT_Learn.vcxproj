@@ -10,6 +10,25 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\db\QDBConn.cpp" />
+    <ClCompile Include="src\log\QLog.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\tree\Tree.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="src\tree\Tree.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="src\tree\Tree.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\db\QDBConn.h" />
+    <ClInclude Include="src\log\QLog.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="src\tree\Tree.ui" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{97B672BF-D73E-46E3-9FEA-9CB1381851A5}</ProjectGuid>
     <Keyword>QtVS_v304</Keyword>
@@ -91,19 +110,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <QtRcc Include="Tree.qrc" />
-    <QtUic Include="Tree.ui" />
-    <QtMoc Include="Tree.h" />
-    <ClCompile Include="QDBConn.cpp" />
-    <ClCompile Include="QLog.cpp" />
-    <ClCompile Include="Tree.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="QDBConn.h" />
-    <ClInclude Include="QLog.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
     <Import Project="$(QtMsBuild)\qt.targets" />

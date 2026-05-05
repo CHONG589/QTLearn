@@ -1,8 +1,8 @@
-#include "Tree.h"
+#include "tree/Tree.h"
 #include <QtWidgets/QApplication>
 
-#include "QLog.h"
-#include "QDBConn.h"
+#include "log/QLog.h"
+#include "db/QDBConn.h"
 
 #pragma comment(linker, "/subsystem:console /entry:mainCRTStartup")
 

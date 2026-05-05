@@ -15,7 +15,7 @@
 #include <QSqlRecord>
 #include <optional>
 
-#include "QLog.h"
+#include "../log/QLog.h"
 
 /**
  * @brief 数据库连接配置结构体
