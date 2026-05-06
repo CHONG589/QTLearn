@@ -12,6 +12,7 @@ x64/
 *.ilk
 *.log
 *.tlog
+*.exp
 
 # Qt 自动生成
 moc_*.cpp
