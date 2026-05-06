@@ -6,8 +6,6 @@
 
 # 编译输出
 x64/
-Debug/
-Release/
 *.exe
 *.pdb
 *.obj
