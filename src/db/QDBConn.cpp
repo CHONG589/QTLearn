@@ -489,7 +489,8 @@ DBPool::ThreadCtx &DBPool::threadCtx() {
  */
 DBConn DBPool::acquire() {
     if (!m_ready.loadAcquire()) {
-        throw DBException("DBPool not initialized");
+        //throw DBException("DBPool not initialized");
+        init();     // 自动初始化
     }
 
     ThreadCtx &ctx = threadCtx();

@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
     Logger::instance().init("", LogLevel::DEBUG, true);
 
     zch::Config::loadFromConfDir("./config");
-    DBPool::instance().init();
 
     Tree window;
     window.show();

@@ -3,6 +3,7 @@
 *.vcxproj.user
 *.VC.db
 *.VC.opendb
+.vscode/
 
 # 编译输出
 x64/
