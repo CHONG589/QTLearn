@@ -2,8 +2,8 @@ database:
   driver: QMYSQL
   ip: 127.0.0.1
   port: 3306
-  user: root
-  pwd: 589520
+  user: LhoGOD+AtE9RYKkd4E5lb1jkWMs7rOSs50LUvIzKyy8=
+  pwd: PwqaOWCnorcbrqxxV9CLx1Ihqbz19OQ574AX2S+vuezpvQ==
   db: learn
   minsize: 5
   maxsize: 20

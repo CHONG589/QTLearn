@@ -581,8 +581,8 @@ QSqlDatabase DBPool::createConnection() {
     db.setHostName(g_db_ip->getValue());
     db.setPort(g_db_port->getValue());
     db.setDatabaseName(g_db_name->getValue());
-    db.setUserName(g_db_user->getValue());
-    db.setPassword(g_db_pwd->getValue());
+    db.setUserName(Crypto::decrypt(g_db_user->getValue()));
+    db.setPassword(Crypto::decrypt(g_db_pwd->getValue()));
 
     if (!db.open()) {
         throw DBException("DB open failed: " + db.lastError().text());

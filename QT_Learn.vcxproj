@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\config\config.cpp" />
+    <ClCompile Include="src\crypto\Crypto.cpp" />
     <ClCompile Include="src\db\QDBConn.cpp" />
     <ClCompile Include="src\log\QLog.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -25,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\config\config.h" />
+    <ClInclude Include="src\crypto\Crypto.h" />
     <ClInclude Include="src\db\QDBConn.h" />
     <ClInclude Include="src\log\QLog.h" />
   </ItemGroup>
@@ -90,10 +92,10 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ProjectDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>yaml-cppd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cppd.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)lib\$(Configuration)\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)lib\$(Configuration)\yaml-cppd.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -102,10 +104,10 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ProjectDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>yaml-cpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>yaml-cpp.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)lib\$(Configuration)\*.dll" "$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)lib\$(Configuration)\yaml-cpp.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">

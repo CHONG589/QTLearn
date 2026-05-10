@@ -23,6 +23,7 @@
 #include <vector>
 #include <cstring>
 #include <stdexcept>
+#include <direct.h>
 
 #include <windows.h>
 
@@ -37,7 +38,7 @@
 static const int  AES_KEY_SIZE = 32;   // AES-256 密钥长度（字节）
 static const int  GCM_IV_SIZE  = 12;   // GCM 推荐 IV 长度
 static const int  GCM_TAG_SIZE = 16;   // GCM 认证标签长度
-static const char KEY_FILE[]   = "config/db.key";
+static const char KEY_FILE[]   = "../config/db.key";
 
 // ============================================================
 // 辅助函数：十六进制编解码
@@ -115,6 +116,14 @@ static std::string readPassword(const char *prompt)
     SetConsoleMode(hStdin, oldMode);
     std::cout << std::endl;
     return input;
+}
+
+std::string current_working_directory()
+{
+    char buff[250];
+    _getcwd(buff, 250); 
+    std::string current_working_directory(buff);
+    return current_working_directory;
 }
 
 // ============================================================
@@ -267,6 +276,9 @@ static std::string encrypt(const std::string &plaintext, const std::vector<unsig
  */
 int main(int argc, char *argv[])
 {
+    SetConsoleOutputCP(CP_UTF8);
+    std::cout << "当前所在目录为：" << current_working_directory() << std::endl;
+
     if (argc < 2) {
         std::cerr << "用法:\n"
                   << "  crypto_tool --genkey   生成本地密钥文件 config/db.key\n"

@@ -22,3 +22,7 @@ qrc_*.cpp
 
 # 运行时日志
 logs/
+
+# 密钥
+./config/db.key
+./config/db_config.yml

@@ -17,6 +17,7 @@
 
 #include "../log/QLog.h"
 #include "../config/config.h"
+#include "../crypto/Crypto.h"
 
 /**
  * @brief 数据库统一异常类

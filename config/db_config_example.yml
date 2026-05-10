@@ -1,0 +1,10 @@
+database:
+  driver: QMYSQL
+  ip: 127.0.0.1
+  port: 3306
+  user: <运行 crypto_tool --encrypt 生成加密用户名后替换此行>
+  pwd:  <运行 crypto_tool --encrypt 生成加密密码后替换此行>
+  db: <数据库名字>
+  minsize: 5
+  maxsize: 20
+  timeout: 3000
