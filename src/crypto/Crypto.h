@@ -11,6 +11,8 @@
 #include <QString>
 #include <vector>
 
+#include "../log/log.h"
+
 /**
  * @brief 加密解密工具类（基于 OpenSSL EVP API）
  *

@@ -3,7 +3,7 @@
 #include <QtWidgets/QWidget>
 
 #include "ui_Tree.h"
-#include "../log/QLog.h"
+#include "../log/log.h"
 #include "../db/QDBConn.h"
 
 class Tree : public QWidget

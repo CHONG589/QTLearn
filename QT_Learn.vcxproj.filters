@@ -29,9 +29,6 @@
     <ClCompile Include="src\tree\Tree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\log\QLog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\db\QDBConn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\crypto\Crypto.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\log\Log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,9 +53,6 @@
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\log\QLog.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\db\QDBConn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -63,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\crypto\Crypto.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\log\Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

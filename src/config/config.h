@@ -29,6 +29,8 @@
 #include <unordered_set>
 #include <QRegularExpression>
 
+#include "../log/log.h"
+
 namespace zch {
 
 // ============================================================
@@ -248,6 +250,82 @@ public:
         YAML::Node node(YAML::NodeType::Map);
         for (auto &i : v) {
             node[i.first] = YAML::Load(LexicalCast<T, std::string>()(i.second));
+        }
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+
+// ============================================================
+// Qt 容器 LexicalCast 特化
+// ============================================================
+
+/**
+ * @brief 类型转换模板类偏特化(std::string 转换成 QVector<T>)
+ */
+template <class T>
+class LexicalCast<std::string, QVector<T>> {
+public:
+    QVector<T> operator()(const std::string &v) {
+        YAML::Node node = YAML::Load(v);
+        QVector<T> vec;
+        std::stringstream ss;
+        for (size_t i = 0; i < node.size(); ++i) {
+            ss.str("");
+            ss << node[i];
+            vec.push_back(LexicalCast<std::string, T>()(ss.str()));
+        }
+        return vec;
+    }
+};
+
+/**
+ * @brief 类型转换模板类偏特化(QVector<T> 转换成 std::string)
+ */
+template <class T>
+class LexicalCast<QVector<T>, std::string> {
+public:
+    std::string operator()(const QVector<T> &v) {
+        YAML::Node node(YAML::NodeType::Sequence);
+        for (auto &i : v) {
+            node.push_back(YAML::Load(LexicalCast<T, std::string>()(i)));
+        }
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+
+/**
+ * @brief 类型转换模板类偏特化(std::string 转换成 QSet<T>)
+ */
+template <class T>
+class LexicalCast<std::string, QSet<T>> {
+public:
+    QSet<T> operator()(const std::string &v) {
+        YAML::Node node = YAML::Load(v);
+        QSet<T> result;
+        std::stringstream ss;
+        for (size_t i = 0; i < node.size(); ++i) {
+            ss.str("");
+            ss << node[i];
+            result.insert(LexicalCast<std::string, T>()(ss.str()));
+        }
+        return result;
+    }
+};
+
+/**
+ * @brief 类型转换模板类偏特化(QSet<T> 转换成 std::string)
+ */
+template <class T>
+class LexicalCast<QSet<T>, std::string> {
+public:
+    std::string operator()(const QSet<T> &v) {
+        YAML::Node node(YAML::NodeType::Sequence);
+        for (auto &i : v) {
+            node.push_back(YAML::Load(LexicalCast<T, std::string>()(i)));
         }
         std::stringstream ss;
         ss << node;

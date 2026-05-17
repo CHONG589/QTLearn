@@ -12,7 +12,7 @@
 #include <QMutexLocker>
 #include <sstream>
 
-#include "../log/QLog.h"
+static zch::Logger::ptr g_logger = LOG_NAME("default");
 
 namespace zch {
 
@@ -31,7 +31,7 @@ static void listAllMember(const QString &prefix, const YAML::Node &node,
     QRegularExpression re("[^abcdefghikjlmnopqrstuvwxyz._012345678]");
     QRegularExpressionMatch match = re.match(prefix);
     if (match.hasMatch()) {
-        LOG_ERROR() << "Config invalid name: " << prefix;
+        LOG_ERROR(g_logger) << "Config invalid name: " << prefix;
         return;
     }
 
@@ -122,11 +122,11 @@ void Config::loadFromConfDir(const QString &path, bool force) {
         try {
             YAML::Node root = YAML::LoadFile(filePath.toStdString());
             loadFromYaml(root);
-            LOG_INFO() << "LoadConfFile file=" << filePath << " ok";
+            LOG_INFO(g_logger) << "LoadConfFile file=" << filePath << " ok";
         } catch (const YAML::BadFile &e) {
-            LOG_ERROR() << "LoadConfFile file=" << filePath << " not found: " << e.what();
+            LOG_ERROR(g_logger) << "LoadConfFile file=" << filePath << " not found: " << e.what();
         } catch (const std::exception &e) {
-            LOG_ERROR() << "LoadConfFile file=" << filePath << " failed: " << e.what();
+            LOG_ERROR(g_logger) << "LoadConfFile file=" << filePath << " failed: " << e.what();
         }
     }
 }

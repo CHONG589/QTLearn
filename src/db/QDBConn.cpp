@@ -1,5 +1,7 @@
 #include "QDBConn.h"
 
+static zch::Logger::ptr g_logger = LOG_NAME("default");
+
 static zch::ConfigVar<QString>::ptr g_db_ip =
     zch::Config::lookup("database.ip", QString("127.0.0.1"), "database ip address");
 

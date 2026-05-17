@@ -14,7 +14,7 @@
     <ClCompile Include="src\config\config.cpp" />
     <ClCompile Include="src\crypto\Crypto.cpp" />
     <ClCompile Include="src\db\QDBConn.cpp" />
-    <ClCompile Include="src\log\QLog.cpp" />
+    <ClCompile Include="src\log\Log.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\tree\Tree.cpp" />
   </ItemGroup>
@@ -28,7 +28,7 @@
     <ClInclude Include="src\config\config.h" />
     <ClInclude Include="src\crypto\Crypto.h" />
     <ClInclude Include="src\db\QDBConn.h" />
-    <ClInclude Include="src\log\QLog.h" />
+    <ClInclude Include="src\log\Log.h" />
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="src\tree\Tree.ui" />

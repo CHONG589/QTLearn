@@ -1,0 +1,9 @@
+logs:
+    - name: default
+      level: DEBUG
+      appenders:
+        - type: StdoutLogAppender
+          pattern: "[%d{yyyy-MM-dd HH:mm:ss}][%p][%f:%l] %m%n"
+        - type: FileLogAppender
+          file: ./logs
+          pattern: "[%d{yyyy-MM-dd HH:mm:ss}][%p][%f:%l] %m%n"

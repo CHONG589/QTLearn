@@ -14,7 +14,7 @@
 #include <QFile>
 #include <QTextStream>
 
-#include "../log/QLog.h"
+static zch::Logger::ptr g_logger = LOG_NAME("default");
 
 // 静态成员初始化
 std::vector<unsigned char> Crypto::s_key;
@@ -63,7 +63,7 @@ bool Crypto::loadKey(const QString &keyPath)
 {
     QFile file(keyPath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        LOG_ERROR() << "Crypto::loadKey: cannot open key file" << keyPath;
+        LOG_ERROR(g_logger) << "Crypto::loadKey: cannot open key file" << keyPath;
         return false;
     }
 
@@ -72,7 +72,7 @@ bool Crypto::loadKey(const QString &keyPath)
     file.close();
 
     if (hex.size() != AES_KEY_SIZE * 2) {
-        LOG_ERROR() << "Crypto::loadKey: key file must contain 64 hex chars, got"
+        LOG_ERROR(g_logger) << "Crypto::loadKey: key file must contain 64 hex chars, got"
                      << hex.size();
         return false;
     }
@@ -81,7 +81,7 @@ bool Crypto::loadKey(const QString &keyPath)
     s_key   = hex2bin(hexBytes.constData(), hexBytes.size());
     s_loaded = true;
 
-    LOG_INFO() << "Crypto::loadKey: key loaded from" << keyPath;
+    LOG_INFO(g_logger) << "Crypto::loadKey: key loaded from" << keyPath;
     return true;
 }
 
@@ -107,7 +107,7 @@ bool Crypto::loadKey(const QString &keyPath)
 QString Crypto::encrypt(const QString &plaintext)
 {
     if (!s_loaded) {
-        LOG_ERROR() << "Crypto::encrypt: key not loaded";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: key not loaded";
         return QString();
     }
 
@@ -116,14 +116,14 @@ QString Crypto::encrypt(const QString &plaintext)
     // 1. 生成随机 IV
     unsigned char iv[GCM_IV_SIZE];
     if (!RAND_bytes(iv, GCM_IV_SIZE)) {
-        LOG_ERROR() << "Crypto::encrypt: failed to generate IV";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: failed to generate IV";
         return QString();
     }
 
     // 2. 创建加密上下文
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        LOG_ERROR() << "Crypto::encrypt: failed to create cipher ctx";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: failed to create cipher ctx";
         return QString();
     }
 
@@ -131,7 +131,7 @@ QString Crypto::encrypt(const QString &plaintext)
     if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr,
                             s_key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::encrypt: init failed";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: init failed";
         return QString();
     }
 
@@ -142,7 +142,7 @@ QString Crypto::encrypt(const QString &plaintext)
                            reinterpret_cast<const unsigned char *>(plainBytes.constData()),
                            plainBytes.size())) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::encrypt: update failed";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: update failed";
         return QString();
     }
     int cipherLen = len;
@@ -150,7 +150,7 @@ QString Crypto::encrypt(const QString &plaintext)
     // 5. 结束加密
     if (!EVP_EncryptFinal_ex(ctx, cipher.data() + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::encrypt: final failed";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: final failed";
         return QString();
     }
     cipherLen += len;
@@ -159,7 +159,7 @@ QString Crypto::encrypt(const QString &plaintext)
     unsigned char tag[GCM_TAG_SIZE];
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, tag)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::encrypt: get tag failed";
+        LOG_ERROR(g_logger) << "Crypto::encrypt: get tag failed";
         return QString();
     }
 
@@ -205,7 +205,7 @@ QString Crypto::encrypt(const QString &plaintext)
 QString Crypto::decrypt(const QString &b64Cipher)
 {
     if (!s_loaded) {
-        LOG_ERROR() << "Crypto::decrypt: key not loaded";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: key not loaded";
         return QString();
     }
 
@@ -227,7 +227,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
 
     // 2. 拆解：IV(12) + 密文 + Tag(16)
     if (combinedLen < GCM_IV_SIZE + GCM_TAG_SIZE + 1) {
-        LOG_ERROR() << "Crypto::decrypt: ciphertext too short, len=" << combinedLen;
+        LOG_ERROR(g_logger) << "Crypto::decrypt: ciphertext too short, len=" << combinedLen;
         return QString();
     }
 
@@ -239,7 +239,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
     // 3. 创建解密上下文
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        LOG_ERROR() << "Crypto::decrypt: failed to create cipher ctx";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: failed to create cipher ctx";
         return QString();
     }
 
@@ -247,7 +247,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
     if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr,
                             s_key.data(), iv)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::decrypt: init failed";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: init failed";
         return QString();
     }
 
@@ -256,7 +256,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
     int len = 0;
     if (!EVP_DecryptUpdate(ctx, plain.data(), &len, cipher, cipherLen)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::decrypt: update failed";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: update failed";
         return QString();
     }
     int plainLen = len;
@@ -265,14 +265,14 @@ QString Crypto::decrypt(const QString &b64Cipher)
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE,
                              const_cast<unsigned char *>(tag))) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::decrypt: set tag failed";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: set tag failed";
         return QString();
     }
 
     // 7. 验证 Tag 并结束解密
     if (!EVP_DecryptFinal_ex(ctx, plain.data() + len, &len)) {
         EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR() << "Crypto::decrypt: tag verification failed (tampered?)";
+        LOG_ERROR(g_logger) << "Crypto::decrypt: tag verification failed (tampered?)";
         return QString();
     }
     plainLen += len;

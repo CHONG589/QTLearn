@@ -1,9 +1,11 @@
 #include "Tree.h"
 
+static zch::Logger::ptr g_logger = LOG_NAME("default");
+
 Tree::Tree(QWidget *parent)
 	: QWidget(parent)
 {
-	LOG_INFO() << "Tree 开始构造";
+	LOG_INFO(g_logger) << "Tree 开始构造";
 
 	ui.setupUi(this);
 
@@ -50,7 +52,7 @@ QList<Node> DataManager::queryChildren(int parentId) {
 		}
 
 	} catch (...) {
-		LOG_ERROR() << "queryChildren error";
+		LOG_ERROR(g_logger) << "queryChildren error";
 	}
 
 	return list;
@@ -71,7 +73,7 @@ bool DataManager::insertNode(QString name, int type, int parentId, int &newId) {
 		return true;
 
 	} catch (const DBException &e) {
-		LOG_ERROR() << "insertNode failed:" << e.what();
+		LOG_ERROR(g_logger) << "insertNode failed:" << e.what();
 		return false;
 	}
 }
@@ -86,7 +88,7 @@ bool DataManager::updateName(int id, QString name) {
 
 		return true;
 	} catch (const DBException &e) {
-		LOG_ERROR() << "updateName failed:" << e.what();
+		LOG_ERROR(g_logger) << "updateName failed:" << e.what();
 		return false;
 	}
 }
@@ -101,7 +103,7 @@ bool DataManager::deleteNode(int id) {
 
 		return true;
 	} catch (const DBException &e) {
-		LOG_ERROR() << "delete id failed:" << e.what();
+		LOG_ERROR(g_logger) << "delete id failed:" << e.what();
 		return false;
 	}
 }
@@ -119,7 +121,7 @@ bool DataManager::hasChildren(int parentId) {
 		return query.next();
 
 	} catch (const DBException &e) {
-		LOG_ERROR() << "hasChildren failed:" << e.what();
+		LOG_ERROR(g_logger) << "hasChildren failed:" << e.what();
 		return false;
 	}
 }
@@ -148,7 +150,7 @@ TreeItem *TreeItem::child(int row) const {
 
 TreeItem *TreeItem::takeChild(int row) {
 	if (row < 0 || row >= m_children.size()) {
-		LOG_WARN() << row << " 溢出：0 <= x < " << m_children.size();
+		LOG_WARN(g_logger) << row << " 溢出：0 <= x < " << m_children.size();
         return nullptr;
 	}
 

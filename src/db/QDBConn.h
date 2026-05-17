@@ -15,7 +15,7 @@
 #include <QSqlRecord>
 #include <optional>
 
-#include "../log/QLog.h"
+#include "../log/log.h"
 #include "../config/config.h"
 #include "../crypto/Crypto.h"
 
@@ -516,7 +516,7 @@ public:
             try {
                 m_conn.rollback();
             } catch (const DBException &e) {
-                LOG_WARN() << "DBTransaction rollback failed: " << e.what();
+                //LOG_WARN() << "DBTransaction rollback failed: " << e.what();
             }
         }
     }
