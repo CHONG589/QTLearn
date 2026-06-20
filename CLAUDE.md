@@ -18,6 +18,7 @@ Qt 6.5.3 学习项目，Windows 平台，Visual Studio 2022 + Qt VS Tools 构建
 
 ```
 main.cpp              → 入口：Config::loadFromConfDir → Crypto::loadKey → DBPool → Tree窗口
+src/common/           → 路径与常量（AppPaths.h，加密常量 + 文件路径的唯一数据源）
 src/config/           → 配置系统：yaml-cpp 驱动，类型安全的 ConfigVar<T>，支持变更回调热更新
 src/crypto/           → 加密模块：AES-256-GCM 认证加密，用于数据库凭证保护
 src/log/              → 日志系统：多日志器 + 多输出器（文件/标准输出），格式模板驱动，YAML 配置
@@ -40,19 +41,22 @@ src/tree/             → UI 层：Tree 窗口 + TreeModel + TreeItem + DataMana
 ### 关键设计决策
 
 - `main.cpp` 使用 `/subsystem:console /entry:mainCRTStartup` 链接选项，使 GUI 程序同时启动控制台窗口用于调试输出。
-- **配置优先于一切**：`Config::loadFromConfDir("./config")` 在 main 中最先执行，之后各模块通过文件级 `static ConfigVar<T>::ptr` 读取配置。模块在静态初始化阶段通过 `Config::lookup()` 声明所需配置项（在 `main()` 之前）。
-- **数据库凭证加密存储**：YAML 中的 `user` 和 `pwd` 为 AES-256-GCM 加密后的 Base64 文本，运行时由 `Crypto::decrypt()` 解密后使用。密钥文件 `config/db.key` 不提交到 git。
+- **配置优先于一切**：`Config::loadFromConfDir()` 在 main 中最先执行，之后各模块通过文件级 `static ConfigVar<T>::ptr` 读取配置。模块在静态初始化阶段通过 `Config::lookup()` 声明所需配置项（在 `main()` 之前）。
+- **路径统一定义**：所有文件路径和加密常量定义在 `src/common/AppPaths.h`，主程序和 crypto_tool 共用同一份，修改路径只需改一处。
+- **数据库凭证加密存储**：YAML 中的 `user` 和 `pwd` 为 AES-256-GCM 加密后的 Base64 文本，运行时由 `Crypto::decrypt()` 解密后使用。密钥文件 `config/db.key` 不提交到 git。新成员通过 `crypto_tool.exe` 交互菜单生成密钥和加密凭证。
+- **yaml-cpp 静态链接**：yaml-cpp 以 .lib 静态链接，无需 DLL。项目 vcxproj 中已定义 `YAML_CPP_STATIC_DEFINE` 宏。
 - **数据库连接池自动初始化**：首次 `acquire()` 时若检测到未初始化则自动调用 `init()`，无需在 main 中显式调用 `DBPool::instance().init()`。
 - 日志系统通过 `LogIniter` 静态对象注册配置变更回调，YAML 中 `logs` 配置变化时自动热更新 Logger 的 level 和 appenders。
+- 日志器在头文件中使用 `LOG_*()` 宏时，用 `LOG_ROOT()` 代替文件级 `g_logger`，避免头文件中的静态变量定义冲突。
 - `Tree.ui` 定义主窗口布局（一个 `QFrame` 内含 `QTreeView`）。
-- `Tree.qrc` 当前为空，预留用于图标等资源。
+- `Tree.qrc` 中未添加图标资源文件，默认使用 `:/icons/folder.png` 和 `:/icons/file.png` 路径。
 
 ## 配置使用
 
 ```cpp
-// main.cpp — 启动时加载配置目录下所有 .yml 文件
-zch::Config::loadFromConfDir("./config");
-Crypto::loadKey("config/db.key");
+// main.cpp — 启动时加载配置（路径统一定义在 src/common/AppPaths.h）
+zch::Config::loadFromConfDir(AppPaths::CONFIG_DIR);
+Crypto::loadKey(AppPaths::KEY_FILE);
 
 // 模块中声明配置项（文件级 static，在 main() 前注册）
 static zch::ConfigVar<QString>::ptr g_db_ip =
@@ -71,9 +75,10 @@ g_db_ip->addListener([](const QString &oldVal, const QString &newVal) {
 
 ```
 config/
-├── db_config.yml    # 数据库连接配置（database.driver, .ip, .port, .user, .pwd, .db, .minsize, .maxsize, .timeout）
-├── logs.yml         # 日志器配置（logs 数组，每个元素含 name/level/appenders）
-└── db.key           # AES-256 密钥（64 位十六进制，不提交 git）
+├── db_config.yml                       # 数据库连接配置（不入库，从模板复制）
+├── db_config_example.yml.template      # 配置模板（入仓库，占位符）
+├── logs.yml                            # 日志器配置
+└── db.key                              # AES-256 密钥（64 位十六进制，不入库）
 ```
 
 配置项名称规则：仅允许 `[0-9a-z_.]`，自动转小写。YAML 树展平为点号分隔的 key 后与已注册 ConfigVar 匹配。
@@ -129,6 +134,7 @@ LOG_ERROR(g_logger) << "error message";
 │  └─Release
 ├─logs
 ├─src
+│  ├─common
 │  ├─config
 │  ├─crypto
 │  ├─db
