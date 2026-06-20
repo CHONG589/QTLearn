@@ -633,7 +633,7 @@ struct LogDefine {
  * @param[in] seed 哈希种子
  * @return 哈希值
  */
-inline uint qHash(const LogDefine &key, uint seed = 0) {
+inline size_t qHash(const LogDefine &key, size_t seed = 0) {
     return qHash(key.name, seed);
 }
 

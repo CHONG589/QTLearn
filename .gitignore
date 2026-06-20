@@ -26,3 +26,8 @@ logs/
 # 密钥
 config/db.key
 config/db_config.yml
+
+# claude
+*.local.md
+.claude/*.local.json
+skills-lock.json

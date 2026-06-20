@@ -29,8 +29,6 @@
 #include <unordered_set>
 #include <QRegularExpression>
 
-#include "../log/log.h"
-
 namespace zch {
 
 // ============================================================
@@ -453,14 +451,8 @@ public:
      * @exception 当转换失败抛出异常
      */
     QString toString() override {
-        try {
-            QReadLocker lock(&m_mutex);
-            return QString::fromStdString(ToStr()(m_val));
-        } catch (std::exception &e) {
-            // LOG_ERROR() << "ConfigVar::toString exception " << e.what()
-            //             << " name=" << m_name;
-        }
-        return QString();
+        QReadLocker lock(&m_mutex);
+        return QString::fromStdString(ToStr()(m_val));
     }
 
     /**
@@ -468,14 +460,8 @@ public:
      * @exception 当转换失败抛出异常
      */
     bool fromString(const QString &val) override {
-        try {
-            setValue(FromStr()(val.toStdString()));
-            return true;
-        } catch (std::exception &e) {
-            // LOG_ERROR() << "ConfigVar::fromString exception "
-            //             << e.what() << " name=" << m_name << " - " << val;
-        }
-        return false;
+        setValue(FromStr()(val.toStdString()));
+        return true;
     }
 
     /**

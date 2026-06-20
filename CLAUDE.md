@@ -111,35 +111,27 @@ LOG_ERROR(g_logger) << "error message";
 | `%T` | 制表符 | - |
 | `%%` | 百分号 | - |
 
-## 代码风格
+### 项目结构
 
-### 函数
-
-- 每个函数的注释都必须按照如下格式添加注释；
-
-```cpp
-/**
- * @brief 获取/创建对应参数名的配置参数
- * @param[in] name 配置参数名称
- * @param[in] defaultValue 参数默认值
- * @param[in] description 参数描述
- * @details 获取参数名为name的配置参数,如果存在直接返回
- *          如果不存在,创建参数配置并用defaultValue赋值
- * @return 返回对应的配置参数,如果参数名存在但是类型不匹配则返回nullptr
- * @exception 如果参数名包含非法字符[^0-9a-z_.] 抛出异常 std::invalid_argument
- */
 ```
-
-- 函数(包含类中的函数)命名：QT 风格的命名方式；
-
-- 函数实现过程中，添加必要的注释解释原因；
-
-### 类
-
-- 类名：大驼峰命名；
-
-- 类变量：`m_varName` 这样用小写 `m_` 加小驼峰命名的方式，并且添加变量作用的注释
-
-### 普通变量命名
-
-采用小驼峰命名；
+├─.claude
+│  ├─agents
+│  ├─commands
+│  └─rules
+├─config
+├─crypto_tool
+├─doc
+├─include
+│  ├─openssl
+│  └─yaml-cpp
+├─lib
+│  ├─Debug
+│  └─Release
+├─logs
+├─src
+│  ├─config
+│  ├─crypto
+│  ├─db
+│  ├─log
+│  └─tree
+```

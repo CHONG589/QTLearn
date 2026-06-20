@@ -12,6 +12,8 @@
 #include <QMutexLocker>
 #include <sstream>
 
+#include "../log/Log.h"
+
 static zch::Logger::ptr g_logger = LOG_NAME("default");
 
 namespace zch {
