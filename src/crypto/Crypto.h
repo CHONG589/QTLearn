@@ -11,6 +11,7 @@
 #include <QString>
 #include <vector>
 
+#include "../common/AppPaths.h"
 #include "../log/log.h"
 
 /**
@@ -44,10 +45,6 @@ public:
     static QString decrypt(const QString &b64Cipher);
 
 private:
-    static const int AES_KEY_SIZE = 32;   // AES-256 密钥长度（字节）
-    static const int GCM_IV_SIZE  = 12;   // GCM 推荐 IV 长度
-    static const int GCM_TAG_SIZE = 16;   // GCM 认证标签长度
-
     static std::vector<unsigned char> s_key;  /// 已加载的密钥
     static bool s_loaded;                     /// 密钥是否已加载
 };

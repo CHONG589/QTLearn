@@ -31,14 +31,13 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#include "../src/common/AppPaths.h"
+
 // ============================================================
 // 常量
 // ============================================================
 
-static const int  AES_KEY_SIZE = 32;   // AES-256 密钥长度（字节）
-static const int  GCM_IV_SIZE  = 12;   // GCM 推荐 IV 长度
-static const int  GCM_TAG_SIZE = 16;   // GCM 认证标签长度
-static const char KEY_FILE[]   = "../config/db.key";
+using namespace AppPaths;   // 直接使用 AppPaths 中的常量和路径
 
 // ============================================================
 // 辅助函数：十六进制编解码
@@ -281,8 +280,8 @@ int main(int argc, char *argv[])
 
     if (argc < 2) {
         std::cerr << "用法:\n"
-                  << "  crypto_tool --genkey   生成本地密钥文件 config/db.key\n"
-                  << "  crypto_tool --encrypt  从 config/db.key 加载密钥，交互式加密文本\n";
+                  << "  crypto_tool --genkey   生成密钥文件 (" << KEY_FILE << ")\n"
+                  << "  crypto_tool --encrypt  从 " << KEY_FILE << " 加载密钥，交互式加密文本\n";
         return 1;
     }
 
@@ -295,7 +294,7 @@ int main(int argc, char *argv[])
             std::string username = readPassword("请输入用户名: ");
             std::string password = readPassword("请输入密码:   ");
 
-            std::cout << "\n--- 复制下面的密文到 config/db_config.yml ---\n\n";
+            std::cout << "\n--- 复制下面的密文到 " << DB_CONFIG << " ---\n\n";
             std::cout << "user: " << encrypt(username, key) << "\n";
             std::cout << "pwd:  " << encrypt(password, key) << "\n\n";
         } else {

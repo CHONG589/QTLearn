@@ -2,6 +2,7 @@
 #include <QtWidgets/QApplication>
 
 #include "db/QDBConn.h"
+#include "common/AppPaths.h"
 #include "crypto/Crypto.h"
 #include "log/log.h"
 
@@ -13,8 +14,8 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    zch::Config::loadFromConfDir("./config");
-    if (!(Crypto::loadKey("config/db.key"))) {
+    zch::Config::loadFromConfDir(AppPaths::CONFIG_DIR);
+    if (!(Crypto::loadKey(AppPaths::KEY_FILE))) {
         LOG_ERROR(g_logger) << "加载密钥失败";
         return 1;
     }

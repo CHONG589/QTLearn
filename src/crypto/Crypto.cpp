@@ -71,7 +71,7 @@ bool Crypto::loadKey(const QString &keyPath)
     QString hex = in.readAll().trimmed();
     file.close();
 
-    if (hex.size() != AES_KEY_SIZE * 2) {
+    if (hex.size() != AppPaths::AES_KEY_SIZE * 2) {
         LOG_ERROR(g_logger) << "Crypto::loadKey: key file must contain 64 hex chars, got"
                      << hex.size();
         return false;
@@ -114,8 +114,8 @@ QString Crypto::encrypt(const QString &plaintext)
     QByteArray plainBytes = plaintext.toUtf8();
 
     // 1. 生成随机 IV
-    unsigned char iv[GCM_IV_SIZE];
-    if (!RAND_bytes(iv, GCM_IV_SIZE)) {
+    unsigned char iv[AppPaths::GCM_IV_SIZE];
+    if (!RAND_bytes(iv, AppPaths::GCM_IV_SIZE)) {
         LOG_ERROR(g_logger) << "Crypto::encrypt: failed to generate IV";
         return QString();
     }
@@ -156,8 +156,8 @@ QString Crypto::encrypt(const QString &plaintext)
     cipherLen += len;
 
     // 6. 获取 GCM 标签
-    unsigned char tag[GCM_TAG_SIZE];
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, tag)) {
+    unsigned char tag[AppPaths::GCM_TAG_SIZE];
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AppPaths::GCM_TAG_SIZE, tag)) {
         EVP_CIPHER_CTX_free(ctx);
         LOG_ERROR(g_logger) << "Crypto::encrypt: get tag failed";
         return QString();
@@ -167,12 +167,12 @@ QString Crypto::encrypt(const QString &plaintext)
 
     // 7. 组装：IV(12) + 密文 + Tag(16)
     std::vector<unsigned char> combined;
-    combined.insert(combined.end(), iv, iv + GCM_IV_SIZE);
+    combined.insert(combined.end(), iv, iv + AppPaths::GCM_IV_SIZE);
     combined.insert(combined.end(), cipher.begin(), cipher.begin() + cipherLen);
-    combined.insert(combined.end(), tag, tag + GCM_TAG_SIZE);
+    combined.insert(combined.end(), tag, tag + AppPaths::GCM_TAG_SIZE);
 
     // 8. Base64 编码
-    int b64Len = ((combined.size() + 2) / 3) * 4 + 1;
+    size_t b64Len = ((combined.size() + 2) / 3) * 4 + 1;
     std::vector<char> b64(b64Len);
     int b64Actual = EVP_EncodeBlock(
         reinterpret_cast<unsigned char *>(b64.data()),
@@ -210,7 +210,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
     }
 
     QByteArray b64Bytes = b64Cipher.toLatin1();
-    int b64Len = b64Bytes.size();
+    int b64Len = static_cast<int>(b64Bytes.size());
 
     // 1. Base64 解码
     std::vector<unsigned char> combined(b64Len);
@@ -219,6 +219,11 @@ QString Crypto::decrypt(const QString &b64Cipher)
         reinterpret_cast<const unsigned char *>(b64Bytes.constData()),
         b64Len);
 
+    if (combinedLen < 0) {
+        LOG_ERROR(g_logger) << "Crypto::decrypt: Base64 decode failed";
+        return QString();
+    }
+
     // EVP_DecodeBlock 在末尾有 = 填充时会多算 1 字节，需要修正
     // 检查最后几个字节是否为零（Base64 填充不会产生零字节）
     while (combinedLen > 0 && combined[combinedLen - 1] == 0) {
@@ -226,15 +231,15 @@ QString Crypto::decrypt(const QString &b64Cipher)
     }
 
     // 2. 拆解：IV(12) + 密文 + Tag(16)
-    if (combinedLen < GCM_IV_SIZE + GCM_TAG_SIZE + 1) {
+    if (combinedLen < AppPaths::GCM_IV_SIZE + AppPaths::GCM_TAG_SIZE + 1) {
         LOG_ERROR(g_logger) << "Crypto::decrypt: ciphertext too short, len=" << combinedLen;
         return QString();
     }
 
     const unsigned char *iv     = combined.data();
-    const unsigned char *cipher = combined.data() + GCM_IV_SIZE;
-    int cipherLen               = combinedLen - GCM_IV_SIZE - GCM_TAG_SIZE;
-    const unsigned char *tag    = combined.data() + GCM_IV_SIZE + cipherLen;
+    const unsigned char *cipher = combined.data() + AppPaths::GCM_IV_SIZE;
+    int cipherLen               = combinedLen - AppPaths::GCM_IV_SIZE - AppPaths::GCM_TAG_SIZE;
+    const unsigned char *tag    = combined.data() + AppPaths::GCM_IV_SIZE + cipherLen;
 
     // 3. 创建解密上下文
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
@@ -262,7 +267,7 @@ QString Crypto::decrypt(const QString &b64Cipher)
     int plainLen = len;
 
     // 6. 设置 GCM 标签（用于验证完整性）
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE,
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AppPaths::GCM_TAG_SIZE,
                              const_cast<unsigned char *>(tag))) {
         EVP_CIPHER_CTX_free(ctx);
         LOG_ERROR(g_logger) << "Crypto::decrypt: set tag failed";
