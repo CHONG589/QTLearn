@@ -9,8 +9,7 @@
  * @brief 主窗口，承载 QTreeView 控件
  * @details 负责初始化 UI 布局，创建 TreeModel 并绑定到视图
  */
-class Tree : public QWidget
-{
+class Tree : public QWidget {
     Q_OBJECT
 
 public:
@@ -36,71 +35,9 @@ private:
  * @details 封装单条 tree_nodes 记录，用于 DataManager 与 TreeItem 之间的数据传递
  */
 struct Node {
-    qlonglong id;    ///< 数据库主键 ID
-    QString name;    ///< 节点显示名称
-    int type;        ///< 节点类型（0=文件夹, 1=文件）
-};
-
-/**
- * @brief 数据管理器，封装所有数据库操作
- * @details 单例模式，提供对 tree_nodes 表的 CRUD 操作。
- *          所有方法在异常时记录日志并返回 false/空列表，不向调用方抛出异常。
- */
-class DataManager {
-public:
-    /**
-     * @brief 获取 DataManager 单例实例
-     * @return 返回 DataManager 的单例引用
-     * @details 使用局部静态变量实现线程安全的懒加载单例
-     */
-    static DataManager &instance();
-
-    /**
-     * @brief 查询指定节点的子节点列表
-     * @param[in] parentId 父节点 ID，传入 0 表示查询根节点
-     * @return 返回子节点列表，查询失败时返回空列表
-     * @details 使用预处理查询防止 SQL 注入
-     */
-    QList<Node> queryChildren(qlonglong parentId);
-
-    /**
-     * @brief 向数据库插入新节点
-     * @param[in] name 节点名称
-     * @param[in] type 节点类型（0=文件夹, 1=文件）
-     * @param[in] parentId 父节点 ID
-     * @param[out] newId 输出参数，返回新插入节点的自增 ID
-     * @return 成功返回 true，失败返回 false
-     * @details 使用预处理插入防止 SQL 注入
-     */
-    bool insertNode(const QString &name, int type, qlonglong parentId, qlonglong &newId);
-
-    /**
-     * @brief 更新节点名称
-     * @param[in] id 目标节点 ID
-     * @param[in] name 新名称
-     * @return 成功返回 true，失败返回 false
-     */
-    bool updateName(qlonglong id, const QString &name);
-
-    /**
-     * @brief 删除指定节点及其所有子孙节点
-     * @param[in] id 目标节点 ID
-     * @return 成功返回 true，失败返回 false
-     * @details 通过广度优先遍历收集所有子孙节点 ID，从叶子向根逐层删除
-     */
-    bool deleteNode(qlonglong id);
-
-    /**
-     * @brief 检查节点是否有子节点
-     * @param[in] parentId 父节点 ID
-     * @return 有子节点返回 true，无子节点或查询失败返回 false
-     */
-    bool hasChildren(qlonglong parentId);
-
-private:
-    DataManager() = default;
-    DataManager(const DataManager &) = delete;
-    DataManager &operator=(const DataManager &) = delete;
+    qlonglong id;    /// 数据库主键 ID
+    QString name;    /// 节点显示名称
+    int type;        /// 节点类型（0=文件夹, 1=文件）
 };
 
 /**
@@ -208,14 +145,76 @@ public:
     void setLoaded(bool loaded);
 
 private:
-    qlonglong m_id;
-    QString m_name;
-    int m_type; // 0=folder, 1=file
+    qlonglong m_id;                     /// 节点在数据库中的主键 ID
+    QString m_name;                     /// 节点显示名称
+    int m_type;                         /// 节点类型（0=文件夹, 1=文件）
 
-    QList<TreeItem *> m_children;
-    TreeItem *m_parent;
+    QList<TreeItem *> m_children;       /// 节点的孩子节点
+    TreeItem *m_parent;                 /// 父节点指针，根节点传入 nullptr
 
-    bool m_loaded;
+    bool m_loaded;                      /// 是否加载数据
+};
+
+/**
+ * @brief 数据管理器，封装所有数据库操作
+ * @details 单例模式，提供对 tree_nodes 表的 CRUD 操作。
+ *          所有方法在异常时记录日志并返回 false/空列表，不向调用方抛出异常。
+ */
+class DataManager {
+public:
+    /**
+     * @brief 获取 DataManager 单例实例
+     * @return 返回 DataManager 的单例引用
+     * @details 使用局部静态变量实现线程安全的懒加载单例
+     */
+    static DataManager &instance();
+
+    /**
+     * @brief 查询指定节点的子节点列表
+     * @param[in] parentId 父节点 ID，传入 0 表示查询根节点
+     * @return 返回子节点列表，查询失败时返回空列表
+     * @details 使用预处理查询防止 SQL 注入
+     */
+    QList<Node> queryChildren(qlonglong parentId);
+
+    /**
+     * @brief 向数据库插入新节点
+     * @param[in] name 节点名称
+     * @param[in] type 节点类型（0=文件夹, 1=文件）
+     * @param[in] parentId 父节点 ID
+     * @param[out] newId 输出参数，返回新插入节点的自增 ID
+     * @return 成功返回 true，失败返回 false
+     * @details 使用预处理插入防止 SQL 注入
+     */
+    bool insertNode(const QString &name, int type, qlonglong parentId, qlonglong &newId);
+
+    /**
+     * @brief 更新节点名称
+     * @param[in] id 目标节点 ID
+     * @param[in] name 新名称
+     * @return 成功返回 true，失败返回 false
+     */
+    bool updateName(qlonglong id, const QString &name);
+
+    /**
+     * @brief 删除指定节点及其所有子孙节点
+     * @param[in] id 目标节点 ID
+     * @return 成功返回 true，失败返回 false
+     * @details 通过广度优先遍历收集所有子孙节点 ID，从叶子向根逐层删除
+     */
+    bool deleteNode(qlonglong id);
+
+    /**
+     * @brief 检查节点是否有子节点
+     * @param[in] parentId 父节点 ID
+     * @return 有子节点返回 true，无子节点或查询失败返回 false
+     */
+    bool hasChildren(qlonglong parentId);
+
+private:
+    DataManager() = default;
+    DataManager(const DataManager &) = delete;
+    DataManager &operator=(const DataManager &) = delete;
 };
 
 /**
@@ -342,7 +341,7 @@ public:
     bool hasChildren(const QModelIndex &parent) const override;
 
 private:
-    TreeItem *m_rootItem = nullptr;
+    TreeItem *m_rootItem;
 
     /**
      * @brief 从数据库加载指定节点的子节点（懒加载核心实现）

@@ -35,6 +35,146 @@ Tree::~Tree()
 }
 
 /**
+ * @brief 构造树节点
+ * @param[in] id 节点在数据库中的主键 ID
+ * @param[in] name 节点显示名称
+ * @param[in] type 节点类型（0=文件夹, 1=文件）
+ * @param[in] parent 父节点指针，根节点传入 nullptr
+ * @details 初始化成员变量，m_loaded 默认 false 以支持懒加载
+ */
+TreeItem::TreeItem(qlonglong id, const QString &name, int type, TreeItem *parent)
+    : m_id(id),
+    m_name(name),
+    m_type(type),
+    m_parent(parent),
+    m_loaded(false) {
+
+    m_children.clear();
+}
+
+/**
+ * @brief 析构树节点，递归释放所有子节点
+ */
+TreeItem::~TreeItem() {
+    qDeleteAll(m_children);
+}
+
+// ==================== 子节点管理 ====================
+
+/**
+ * @brief 添加子节点
+ * @param[in] child 待添加的子节点指针（由调用方分配内存）
+ */
+void TreeItem::appendChild(TreeItem *child) {
+    m_children.append(child);
+}
+
+/**
+ * @brief 获取指定行号的子节点
+ * @param[in] row 行号（从 0 开始）
+ * @return 返回子节点指针，行号越界时返回 nullptr
+ */
+TreeItem *TreeItem::child(int row) const {
+    return m_children.value(row);
+}
+
+/**
+ * @brief 移除并返回指定行号的子节点
+ * @param[in] row 行号（从 0 开始）
+ * @return 返回被移除的子节点指针，调用方负责释放内存；越界返回 nullptr
+ * @details 从子节点列表中取出但不释放内存，用于删除操作中配合 delete 使用
+ */
+TreeItem *TreeItem::takeChild(int row) {
+    if (row < 0 || row >= m_children.size()) {
+        LOG_WARN(g_logger) << row << " 溢出：0 <= x < " << m_children.size();
+        return nullptr;
+    }
+
+    return m_children.takeAt(row);
+}
+
+/**
+ * @brief 获取子节点数量
+ * @return 返回子节点个数
+ */
+int TreeItem::childCount() const {
+    return m_children.size();
+}
+
+/**
+ * @brief 获取当前节点在父节点中的行号
+ * @return 返回行号（从 0 开始），根节点返回 0
+ */
+int TreeItem::row() const {
+    if (m_parent) {
+        // 遍历查找 this 在父节点子列表中的位置，避免 const_cast
+        for (int i = 0; i < m_parent->m_children.size(); ++i) {
+            if (m_parent->m_children[i] == this) {
+                return i;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief 获取父节点指针
+ * @return 返回父节点指针，根节点返回 nullptr
+ */
+TreeItem *TreeItem::parent() const {
+    return m_parent;
+}
+
+/**
+ * @brief 获取节点在数据库中的主键 ID
+ * @return 返回节点 ID
+ */
+qlonglong TreeItem::id() const {
+    return m_id;
+}
+
+/**
+ * @brief 获取节点显示名称
+ * @return 返回节点名称
+ */
+QString TreeItem::name() const {
+    return m_name;
+}
+
+/**
+ * @brief 设置节点显示名称
+ * @param[in] name 新名称
+ */
+void TreeItem::setName(const QString &name) {
+    m_name = name;
+}
+
+/**
+ * @brief 获取节点类型
+ * @return 返回节点类型（0=文件夹, 1=文件）
+ */
+int TreeItem::type() const {
+    return m_type;
+}
+
+/**
+ * @brief 查询子节点是否已从数据库加载
+ * @return 已加载返回 true，未加载返回 false
+ */
+bool TreeItem::isLoaded() const {
+    return m_loaded;
+}
+
+/**
+ * @brief 设置子节点加载状态
+ * @param[in] loaded 加载状态
+ */
+void TreeItem::setLoaded(bool loaded) {
+    m_loaded = loaded;
+}
+
+/**
  * @brief 获取 DataManager 单例实例
  * @return 返回 DataManager 的单例引用
  * @details 使用局部静态变量实现线程安全的懒加载单例
@@ -54,7 +194,6 @@ DataManager &DataManager::instance()
 QList<Node> DataManager::queryChildren(qlonglong parentId) 
 {
     QList<Node> list;
-
     try {
         ScopedConn conn;
         // parentId==0 表示查询根节点，此时 parent_id 为 NULL，需用 IS NULL 而非 =?
@@ -70,7 +209,6 @@ QList<Node> DataManager::queryChildren(qlonglong parentId)
 
         // 执行预处理查询，第二个参数 {} 表示无额外输出绑定
         conn->execPrepared(query, {});
-
         while (query.next()) {
             list.append({
                 query.value(0).toLongLong(),
@@ -121,8 +259,7 @@ bool DataManager::insertNode(const QString &name, int type, qlonglong parentId, 
  * @return 成功返回 true，失败返回 false
  */
 bool DataManager::updateName(qlonglong id, const QString &name) 
-{
-    
+{   
     try {
         ScopedConn conn;
         QString sql = "UPDATE tree_nodes SET name=? WHERE id=?";
@@ -144,7 +281,6 @@ bool DataManager::updateName(qlonglong id, const QString &name)
  */
 bool DataManager::deleteNode(qlonglong id) 
 {
-
     try {
         ScopedConn conn;
         // 广度优先遍历收集所有子孙节点 ID
@@ -202,165 +338,14 @@ bool DataManager::hasChildren(qlonglong parentId)
 }
 
 /**
- * @brief 构造树节点
- * @param[in] id 节点在数据库中的主键 ID
- * @param[in] name 节点显示名称
- * @param[in] type 节点类型（0=文件夹, 1=文件）
- * @param[in] parent 父节点指针，根节点传入 nullptr
- * @details 初始化成员变量，m_loaded 默认 false 以支持懒加载
- */
-TreeItem::TreeItem(qlonglong id, const QString &name, int type, TreeItem *parent)
-    : m_id(id),
-    m_name(name),
-    m_type(type),
-    m_parent(parent),
-    m_loaded(false) 
-{
-}
-
-/**
- * @brief 析构树节点，递归释放所有子节点
- */
-TreeItem::~TreeItem() 
-{
-    qDeleteAll(m_children);
-}
-
-// ==================== 子节点管理 ====================
-
-/**
- * @brief 添加子节点
- * @param[in] child 待添加的子节点指针（由调用方分配内存）
- */
-void TreeItem::appendChild(TreeItem *child) 
-{
-    m_children.append(child);
-}
-
-/**
- * @brief 获取指定行号的子节点
- * @param[in] row 行号（从 0 开始）
- * @return 返回子节点指针，行号越界时返回 nullptr
- */
-TreeItem *TreeItem::child(int row) const 
-{
-    return m_children.value(row);
-}
-
-/**
- * @brief 移除并返回指定行号的子节点
- * @param[in] row 行号（从 0 开始）
- * @return 返回被移除的子节点指针，调用方负责释放内存；越界返回 nullptr
- * @details 从子节点列表中取出但不释放内存，用于删除操作中配合 delete 使用
- */
-TreeItem *TreeItem::takeChild(int row) 
-{
-    if (row < 0 || row >= m_children.size()) {
-        LOG_WARN(g_logger) << row << " 溢出：0 <= x < " << m_children.size();
-        return nullptr;
-    }
-
-    return m_children.takeAt(row);
-}
-
-/**
- * @brief 获取子节点数量
- * @return 返回子节点个数
- */
-int TreeItem::childCount() const 
-{
-    return m_children.size();
-}
-
-/**
- * @brief 获取当前节点在父节点中的行号
- * @return 返回行号（从 0 开始），根节点返回 0
- */
-int TreeItem::row() const 
-{
-    if (m_parent) {
-        // 遍历查找 this 在父节点子列表中的位置，避免 const_cast
-        for (int i = 0; i < m_parent->m_children.size(); ++i) {
-            if (m_parent->m_children[i] == this) {
-                return i;
-            }
-        }
-    }
-
-    return 0;
-}
-
-/**
- * @brief 获取父节点指针
- * @return 返回父节点指针，根节点返回 nullptr
- */
-TreeItem *TreeItem::parent() const 
-{
-    return m_parent;
-}
-
-/**
- * @brief 获取节点在数据库中的主键 ID
- * @return 返回节点 ID
- */
-qlonglong TreeItem::id() const 
-{
-    return m_id;
-}
-
-/**
- * @brief 获取节点显示名称
- * @return 返回节点名称
- */
-QString TreeItem::name() const 
-{
-    return m_name;
-}
-
-/**
- * @brief 设置节点显示名称
- * @param[in] name 新名称
- */
-void TreeItem::setName(const QString &name) 
-{
-    m_name = name;
-}
-
-/**
- * @brief 获取节点类型
- * @return 返回节点类型（0=文件夹, 1=文件）
- */
-int TreeItem::type() const 
-{
-    return m_type;
-}
-
-/**
- * @brief 查询子节点是否已从数据库加载
- * @return 已加载返回 true，未加载返回 false
- */
-bool TreeItem::isLoaded() const 
-{
-    return m_loaded;
-}
-
-/**
- * @brief 设置子节点加载状态
- * @param[in] loaded 加载状态
- */
-void TreeItem::setLoaded(bool loaded) 
-{
-    m_loaded = loaded;
-}
-
-/**
  * @brief 构造树模型
  * @param[in] parent 父 QObject 指针
  * @details 创建不可见的虚拟根节点 m_rootItem，从数据库加载顶级节点作为其子节点。
  *          m_rootItem 不显示在视图中，仅作为所有顶级节点的逻辑父节点。
  */
 TreeModel::TreeModel(QObject *parent)
-    : QAbstractItemModel(parent) 
+    : QAbstractItemModel(parent)
+    , m_rootItem(nullptr)
 {
     m_rootItem = new TreeItem(0, "", 0, nullptr);
     // 从数据库加载顶级节点（parent_id IS NULL）
@@ -398,12 +383,16 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) con
         return QModelIndex();
     }
 
+    // 如果 parent 索引有效，则返回它的内部指针
     TreeItem *parentItem = parent.isValid()
         ? static_cast<TreeItem *>(parent.internalPointer())
         : m_rootItem;
 
+    // 从父节点的 m_children 列表中取第 row 个
     TreeItem *child = parentItem->child(row);
     if (child) {
+        // 把 child 指针塞进新索引的 internalPointer，下
+        // 次别人拿着这个索引就能通过 internalPointer 取回同一个 child
         return createIndex(row, column, child);
     }
 
