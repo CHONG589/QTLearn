@@ -36,7 +36,9 @@ QTLearn/
 │   └── tree/            # UI：QTreeView + QAbstractItemModel + 懒加载
 ├── crypto_tool/         # 独立加密工具（纯 C++，不依赖 Qt）
 ├── config/              # 配置文件（db.key 和 db_config.yml 不入库）
-├── include/openssl/     # OpenSSL 头文件
+├── include/
+│   ├── openssl/         # OpenSSL 头文件
+│   └── yaml-cpp/        # Yaml-cpp 头文件
 ├── lib/                 # 第三方库
 └── doc/                 # 文档
 ```
