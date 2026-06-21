@@ -65,6 +65,9 @@
     <ClInclude Include="src\log\Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\common\AppPaths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="src\tree\Tree.ui">

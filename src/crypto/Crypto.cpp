@@ -103,12 +103,12 @@ bool Crypto::loadKey(const QString &keyPath)
  *
  * @param[in] plaintext 明文字符串
  * @return Base64 密文
+ * @exception std::runtime_error 密钥未加载或加密失败
  */
 QString Crypto::encrypt(const QString &plaintext)
 {
     if (!s_loaded) {
-        LOG_ERROR(g_logger) << "Crypto::encrypt: key not loaded";
-        return QString();
+        throw std::runtime_error("Key not loaded");
     }
 
     QByteArray plainBytes = plaintext.toUtf8();
@@ -116,54 +116,41 @@ QString Crypto::encrypt(const QString &plaintext)
     // 1. 生成随机 IV
     unsigned char iv[AppPaths::GCM_IV_SIZE];
     if (!RAND_bytes(iv, AppPaths::GCM_IV_SIZE)) {
-        LOG_ERROR(g_logger) << "Crypto::encrypt: failed to generate IV";
-        return QString();
+        throw std::runtime_error("Failed to generate IV");
     }
 
-    // 2. 创建加密上下文
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) {
-        LOG_ERROR(g_logger) << "Crypto::encrypt: failed to create cipher ctx";
-        return QString();
-    }
+    // 2. 创建加密上下文（RAII 自动管理）
+    EvpCipherCtx ctx;
 
     // 3. 初始化加密
-    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr,
+    if (!EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_gcm(), nullptr,
                             s_key.data(), iv)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::encrypt: init failed";
-        return QString();
+        throw std::runtime_error("Encrypt init failed");
     }
 
     // 4. 加密数据
     std::vector<unsigned char> cipher(plainBytes.size() + 16);
     int len = 0;
-    if (!EVP_EncryptUpdate(ctx, cipher.data(), &len,
+    if (!EVP_EncryptUpdate(ctx.get(), cipher.data(), &len,
                            reinterpret_cast<const unsigned char *>(plainBytes.constData()),
                            plainBytes.size())) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::encrypt: update failed";
-        return QString();
+        throw std::runtime_error("Encrypt update failed");
     }
     int cipherLen = len;
 
     // 5. 结束加密
-    if (!EVP_EncryptFinal_ex(ctx, cipher.data() + len, &len)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::encrypt: final failed";
-        return QString();
+    if (!EVP_EncryptFinal_ex(ctx.get(), cipher.data() + len, &len)) {
+        throw std::runtime_error("Encrypt final failed");
     }
     cipherLen += len;
 
     // 6. 获取 GCM 标签
     unsigned char tag[AppPaths::GCM_TAG_SIZE];
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AppPaths::GCM_TAG_SIZE, tag)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::encrypt: get tag failed";
-        return QString();
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, AppPaths::GCM_TAG_SIZE, tag)) {
+        throw std::runtime_error("Get GCM tag failed");
     }
 
-    EVP_CIPHER_CTX_free(ctx);
+    // ctx 析构时自动 EVP_CIPHER_CTX_free
 
     // 7. 组装：IV(12) + 密文 + Tag(16)
     std::vector<unsigned char> combined;
@@ -200,13 +187,13 @@ QString Crypto::encrypt(const QString &plaintext)
  *          7. 返回明文
  *
  * @param[in] b64Cipher Base64 编码的密文
- * @return 解密后的明文，失败返回空字符串
+ * @return 解密后的明文
+ * @exception std::runtime_error 密钥未加载、格式错误、Tag 验证失败
  */
 QString Crypto::decrypt(const QString &b64Cipher)
 {
     if (!s_loaded) {
-        LOG_ERROR(g_logger) << "Crypto::decrypt: key not loaded";
-        return QString();
+        throw std::runtime_error("Key not loaded");
     }
 
     QByteArray b64Bytes = b64Cipher.toLatin1();
@@ -220,20 +207,17 @@ QString Crypto::decrypt(const QString &b64Cipher)
         b64Len);
 
     if (combinedLen < 0) {
-        LOG_ERROR(g_logger) << "Crypto::decrypt: Base64 decode failed";
-        return QString();
+        throw std::runtime_error("Base64 decode failed");
     }
 
     // EVP_DecodeBlock 在末尾有 = 填充时会多算 1 字节，需要修正
-    // 检查最后几个字节是否为零（Base64 填充不会产生零字节）
     while (combinedLen > 0 && combined[combinedLen - 1] == 0) {
         combinedLen--;
     }
 
     // 2. 拆解：IV(12) + 密文 + Tag(16)
     if (combinedLen < AppPaths::GCM_IV_SIZE + AppPaths::GCM_TAG_SIZE + 1) {
-        LOG_ERROR(g_logger) << "Crypto::decrypt: ciphertext too short, len=" << combinedLen;
-        return QString();
+        throw std::runtime_error("Ciphertext too short");
     }
 
     const unsigned char *iv     = combined.data();
@@ -241,48 +225,36 @@ QString Crypto::decrypt(const QString &b64Cipher)
     int cipherLen               = combinedLen - AppPaths::GCM_IV_SIZE - AppPaths::GCM_TAG_SIZE;
     const unsigned char *tag    = combined.data() + AppPaths::GCM_IV_SIZE + cipherLen;
 
-    // 3. 创建解密上下文
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) {
-        LOG_ERROR(g_logger) << "Crypto::decrypt: failed to create cipher ctx";
-        return QString();
-    }
+    // 3. 创建解密上下文（RAII 自动管理）
+    EvpCipherCtx ctx;
 
     // 4. 初始化解密
-    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr,
+    if (!EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_gcm(), nullptr,
                             s_key.data(), iv)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::decrypt: init failed";
-        return QString();
+        throw std::runtime_error("Decrypt init failed");
     }
 
     // 5. 解密数据
     std::vector<unsigned char> plain(cipherLen + 16);
     int len = 0;
-    if (!EVP_DecryptUpdate(ctx, plain.data(), &len, cipher, cipherLen)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::decrypt: update failed";
-        return QString();
+    if (!EVP_DecryptUpdate(ctx.get(), plain.data(), &len, cipher, cipherLen)) {
+        throw std::runtime_error("Decrypt update failed");
     }
     int plainLen = len;
 
     // 6. 设置 GCM 标签（用于验证完整性）
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AppPaths::GCM_TAG_SIZE,
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, AppPaths::GCM_TAG_SIZE,
                              const_cast<unsigned char *>(tag))) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::decrypt: set tag failed";
-        return QString();
+        throw std::runtime_error("Set GCM tag failed");
     }
 
     // 7. 验证 Tag 并结束解密
-    if (!EVP_DecryptFinal_ex(ctx, plain.data() + len, &len)) {
-        EVP_CIPHER_CTX_free(ctx);
-        LOG_ERROR(g_logger) << "Crypto::decrypt: tag verification failed (tampered?)";
-        return QString();
+    if (!EVP_DecryptFinal_ex(ctx.get(), plain.data() + len, &len)) {
+        throw std::runtime_error("Tag verification failed - data may be tampered");
     }
     plainLen += len;
 
-    EVP_CIPHER_CTX_free(ctx);
+    // ctx 析构时自动 EVP_CIPHER_CTX_free
 
     return QString::fromUtf8(
         reinterpret_cast<const char *>(plain.data()), plainLen);

@@ -25,6 +25,7 @@
     <QtMoc Include="src\tree\Tree.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\AppPaths.h" />
     <ClInclude Include="src\config\config.h" />
     <ClInclude Include="src\crypto\Crypto.h" />
     <ClInclude Include="src\db\QDBConn.h" />
