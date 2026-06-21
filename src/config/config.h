@@ -53,6 +53,9 @@ public:
         std::stringstream ss;
         ss << v;
         ss >> ret;
+        if (ss.fail()) {
+            throw std::runtime_error("LexicalCast failed: cannot convert");
+        }
         return ret;
     }
 };
@@ -408,8 +411,9 @@ public:
 
     /**
      * @brief 从 YAML 字符串初始化值
+     * @exception 转换失败时抛出异常
      */
-    virtual bool fromString(const QString &val) = 0;
+    virtual void fromString(const QString &val) = 0;
 
     /**
      * @brief 返回配置参数值的类型名称
@@ -459,9 +463,8 @@ public:
      * @brief 从 YAML String 转成参数的值
      * @exception 当转换失败抛出异常
      */
-    bool fromString(const QString &val) override {
+    void fromString(const QString &val) override {
         setValue(FromStr()(val.toStdString()));
-        return true;
     }
 
     /**
@@ -580,7 +583,7 @@ public:
             }
         }
 
-        if (name.contains(QRegularExpression("[^abcdefghikjlmnopqrstuvwxyz._012345678]"))) {
+        if (name.contains(QRegularExpression("[^a-z0-9._]"))) {
             // LOG_ERROR() << "Lookup name invalid " << name;
             throw std::invalid_argument(name.toStdString());
         }

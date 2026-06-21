@@ -30,7 +30,7 @@ namespace zch {
  */
 static void listAllMember(const QString &prefix, const YAML::Node &node,
                           QList<QPair<QString, YAML::Node>> &output) {
-    QRegularExpression re("[^abcdefghikjlmnopqrstuvwxyz._012345678]");
+    QRegularExpression re("[^a-z0-9._]");
     QRegularExpressionMatch match = re.match(prefix);
     if (match.hasMatch()) {
         LOG_ERROR(g_logger) << "Config invalid name: " << prefix;
@@ -40,8 +40,12 @@ static void listAllMember(const QString &prefix, const YAML::Node &node,
     output.append(QPair<QString, YAML::Node>(prefix, node));
     if (node.IsMap()) {
         for (auto it = node.begin(); it != node.end(); ++it) {
-            QString key = QString::fromStdString(it->first.Scalar());
-            listAllMember(prefix.isEmpty() ? key : prefix + "." + key, it->second, output);
+            try {
+                QString key = QString::fromStdString(it->first.Scalar());
+                listAllMember(prefix.isEmpty() ? key : prefix + "." + key, it->second, output);
+            } catch (const YAML::Exception &e) {
+                LOG_ERROR(g_logger) << "Config: invalid YAML key in " << prefix << ": " << e.what();
+            }
         }
     }
 }
@@ -81,12 +85,16 @@ void Config::loadFromYaml(const YAML::Node &root) {
         ConfigVarBase::ptr var = lookupBase(key);
 
         if (var) {
-            if (i.second.IsScalar()) {
-                var->fromString(QString::fromStdString(i.second.Scalar()));
-            } else {
-                std::stringstream ss;
-                ss << i.second;
-                var->fromString(QString::fromStdString(ss.str()));
+            try {
+                if (i.second.IsScalar()) {
+                    var->fromString(QString::fromStdString(i.second.Scalar()));
+                } else {
+                    std::stringstream ss;
+                    ss << i.second;
+                    var->fromString(QString::fromStdString(ss.str()));
+                }
+            } catch (const std::exception &e) {
+                LOG_ERROR(g_logger) << "Config: failed to set " << key << ": " << e.what();
             }
         }
     }
