@@ -11,28 +11,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\config\config.cpp" />
-    <ClCompile Include="src\crypto\Crypto.cpp" />
-    <ClCompile Include="src\db\QDBConn.cpp" />
-    <ClCompile Include="src\log\Log.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\tree\Tree.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="tree\Tree.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="src\tree\Tree.qrc" />
+    <QtRcc Include="tree\Tree.qrc" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="src\tree\Tree.h" />
+    <QtMoc Include="tree\Tree.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\AppPaths.h" />
-    <ClInclude Include="src\config\config.h" />
-    <ClInclude Include="src\crypto\Crypto.h" />
-    <ClInclude Include="src\db\QDBConn.h" />
-    <ClInclude Include="src\log\Log.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtUic Include="src\tree\Tree.ui" />
+    <QtUic Include="tree\Tree.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QTLearnCommon\QTLearnCommon.vcxproj">
+      <Project>{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{97B672BF-D73E-46E3-9FEA-9CB1381851A5}</ProjectGuid>
@@ -84,24 +80,26 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)QTLearnCommon;$(SolutionDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(ProjectDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>yaml-cppd.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)QTLearnCommon;$(SolutionDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(ProjectDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>yaml-cpp.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

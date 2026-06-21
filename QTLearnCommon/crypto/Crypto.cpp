@@ -1,0 +1,270 @@
+/**
+ * @file Crypto.cpp
+ * @brief AES-256-GCM 加密解密工具类实现
+ * @author zch
+ * @date 2026-05-06
+ */
+
+#include "Crypto.h"
+
+#include <fstream>
+#include <algorithm>
+
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
+
+// 静态成员初始化
+std::vector<unsigned char> Crypto::s_key;
+bool Crypto::s_loaded = false;
+
+// ============================================================
+// 辅助：十六进制编解码
+// ============================================================
+
+static std::string bin2hex(const unsigned char *data, int len)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    std::string out(len * 2, '\0');
+    for (int i = 0; i < len; ++i) {
+        out[i * 2]     = hex[data[i] >> 4];
+        out[i * 2 + 1] = hex[data[i] & 0x0F];
+    }
+    return out;
+}
+
+static std::vector<unsigned char> hex2bin(const char *hex, int len)
+{
+    // len 是 hex 字符串的字符数，结果是 len/2 字节
+    std::vector<unsigned char> out(len / 2);
+    for (int i = 0; i < len; i += 2) {
+        char buf[] = {hex[i], hex[i + 1], '\0'};
+        out[i / 2] = static_cast<unsigned char>(std::stoi(buf, nullptr, 16));
+    }
+    return out;
+}
+
+// ============================================================
+// 密钥管理
+// ============================================================
+
+/**
+ * @brief 生成随机密钥并写入文件
+ * @param[in] keyPath 密钥文件路径
+ * @return true 生成成功
+ */
+bool Crypto::generateKey(const std::string &keyPath)
+{
+    unsigned char key[AppPaths::AES_KEY_SIZE];
+    if (!RAND_bytes(key, AppPaths::AES_KEY_SIZE)) {
+        return false;
+    }
+
+    std::ofstream ofs(keyPath);
+    if (!ofs) {
+        return false;
+    }
+    ofs << bin2hex(key, AppPaths::AES_KEY_SIZE);
+    return true;
+}
+
+/**
+ * @brief 从文件加载密钥
+ *
+ * @details 读取 hex 格式的密钥文件（64 个字符 → 32 字节），
+ *          文件不存在或格式错误时返回 false。
+ *
+ * @param[in] keyPath 密钥文件路径
+ * @return true 加载成功
+ */
+bool Crypto::loadKey(const std::string &keyPath)
+{
+    std::ifstream file(keyPath);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    std::string hex;
+    std::getline(file, hex);
+    // 去除可能的换行符和空白
+    hex.erase(std::remove_if(hex.begin(), hex.end(), ::isspace), hex.end());
+
+    if (hex.size() != static_cast<size_t>(AppPaths::AES_KEY_SIZE) * 2) {
+        return false;
+    }
+
+    s_key   = hex2bin(hex.data(), static_cast<int>(hex.size()));
+    s_loaded = true;
+    return true;
+}
+
+// ============================================================
+// AES-256-GCM 加密
+// ============================================================
+
+/**
+ * @brief 加密明文字符串
+ *
+ * @details 流程：
+ *          1. 检查密钥是否已加载
+ *          2. 生成 12 字节随机 IV
+ *          3. EVP_EncryptInit_ex 初始化 AES-256-GCM
+ *          4. EVP_EncryptUpdate 加密数据
+ *          5. EVP_EncryptFinal_ex 结束加密
+ *          6. EVP_CIPHER_CTX_ctrl 获取 GCM 认证标签
+ *          7. 组装 IV + 密文 + Tag，Base64 编码返回
+ *
+ * @param[in] plaintext 明文字符串（UTF-8 编码）
+ * @return Base64 密文
+ * @exception std::runtime_error 密钥未加载或加密失败
+ */
+std::string Crypto::encrypt(const std::string &plaintext)
+{
+    if (!s_loaded) {
+        throw std::runtime_error("Key not loaded");
+    }
+
+    // 1. 生成随机 IV
+    unsigned char iv[AppPaths::GCM_IV_SIZE];
+    if (!RAND_bytes(iv, AppPaths::GCM_IV_SIZE)) {
+        throw std::runtime_error("Failed to generate IV");
+    }
+
+    // 2. 创建加密上下文（RAII 自动管理）
+    EvpCipherCtx ctx;
+
+    // 3. 初始化加密
+    if (!EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_gcm(), nullptr,
+                            s_key.data(), iv)) {
+        throw std::runtime_error("Encrypt init failed");
+    }
+
+    // 4. 加密数据
+    std::vector<unsigned char> cipher(plaintext.size() + 16);
+    int len = 0;
+    if (!EVP_EncryptUpdate(ctx.get(), cipher.data(), &len,
+                           reinterpret_cast<const unsigned char *>(plaintext.data()),
+                           static_cast<int>(plaintext.size()))) {
+        throw std::runtime_error("Encrypt update failed");
+    }
+    int cipherLen = len;
+
+    // 5. 结束加密
+    if (!EVP_EncryptFinal_ex(ctx.get(), cipher.data() + len, &len)) {
+        throw std::runtime_error("Encrypt final failed");
+    }
+    cipherLen += len;
+
+    // 6. 获取 GCM 标签
+    unsigned char tag[AppPaths::GCM_TAG_SIZE];
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, AppPaths::GCM_TAG_SIZE, tag)) {
+        throw std::runtime_error("Get GCM tag failed");
+    }
+
+    // ctx 析构时自动 EVP_CIPHER_CTX_free
+
+    // 7. 组装：IV(12) + 密文 + Tag(16)
+    std::vector<unsigned char> combined;
+    combined.insert(combined.end(), iv, iv + AppPaths::GCM_IV_SIZE);
+    combined.insert(combined.end(), cipher.begin(), cipher.begin() + cipherLen);
+    combined.insert(combined.end(), tag, tag + AppPaths::GCM_TAG_SIZE);
+
+    // 8. Base64 编码
+    size_t b64Len = ((combined.size() + 2) / 3) * 4 + 1;
+    std::vector<char> b64(b64Len);
+    int b64Actual = EVP_EncodeBlock(
+        reinterpret_cast<unsigned char *>(b64.data()),
+        combined.data(),
+        static_cast<int>(combined.size()));
+    b64.resize(b64Actual);
+
+    return std::string(b64.data(), b64Actual);
+}
+
+// ============================================================
+// AES-256-GCM 解密
+// ============================================================
+
+/**
+ * @brief 解密密文字符串
+ *
+ * @details 流程：
+ *          1. Base64 解码
+ *          2. 拆解 IV(前12字节) + 密文(中间) + Tag(最后16字节)
+ *          3. EVP_DecryptInit_ex 初始化解密
+ *          4. EVP_DecryptUpdate 解密数据
+ *          5. EVP_CIPHER_CTX_ctrl 设置 GCM 标签
+ *          6. EVP_DecryptFinal_ex 验证标签并结束解密
+ *          7. 返回明文
+ *
+ * @param[in] b64Cipher Base64 编码的密文
+ * @return 解密后的明文（UTF-8 编码）
+ * @exception std::runtime_error 密钥未加载、格式错误、Tag 验证失败
+ */
+std::string Crypto::decrypt(const std::string &b64Cipher)
+{
+    if (!s_loaded) {
+        throw std::runtime_error("Key not loaded");
+    }
+
+    int b64Len = static_cast<int>(b64Cipher.size());
+
+    // 1. Base64 解码
+    std::vector<unsigned char> combined(b64Len);
+    int combinedLen = EVP_DecodeBlock(
+        combined.data(),
+        reinterpret_cast<const unsigned char *>(b64Cipher.data()),
+        b64Len);
+
+    if (combinedLen < 0) {
+        throw std::runtime_error("Base64 decode failed");
+    }
+
+    // EVP_DecodeBlock 在末尾有 = 填充时会多算 1 字节，需要修正
+    while (combinedLen > 0 && combined[combinedLen - 1] == 0) {
+        combinedLen--;
+    }
+
+    // 2. 拆解：IV(12) + 密文 + Tag(16)
+    if (combinedLen < AppPaths::GCM_IV_SIZE + AppPaths::GCM_TAG_SIZE + 1) {
+        throw std::runtime_error("Ciphertext too short");
+    }
+
+    const unsigned char *iv     = combined.data();
+    const unsigned char *cipher = combined.data() + AppPaths::GCM_IV_SIZE;
+    int cipherLen               = combinedLen - AppPaths::GCM_IV_SIZE - AppPaths::GCM_TAG_SIZE;
+    const unsigned char *tag    = combined.data() + AppPaths::GCM_IV_SIZE + cipherLen;
+
+    // 3. 创建解密上下文（RAII 自动管理）
+    EvpCipherCtx ctx;
+
+    // 4. 初始化解密
+    if (!EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_gcm(), nullptr,
+                            s_key.data(), iv)) {
+        throw std::runtime_error("Decrypt init failed");
+    }
+
+    // 5. 解密数据
+    std::vector<unsigned char> plain(cipherLen + 16);
+    int len = 0;
+    if (!EVP_DecryptUpdate(ctx.get(), plain.data(), &len, cipher, cipherLen)) {
+        throw std::runtime_error("Decrypt update failed");
+    }
+    int plainLen = len;
+
+    // 6. 设置 GCM 标签（用于验证完整性）
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, AppPaths::GCM_TAG_SIZE,
+                             const_cast<unsigned char *>(tag))) {
+        throw std::runtime_error("Set GCM tag failed");
+    }
+
+    // 7. 验证 Tag 并结束解密
+    if (!EVP_DecryptFinal_ex(ctx.get(), plain.data() + len, &len)) {
+        throw std::runtime_error("Tag verification failed - data may be tampered");
+    }
+    plainLen += len;
+
+    // ctx 析构时自动 EVP_CIPHER_CTX_free
+
+    return std::string(reinterpret_cast<const char *>(plain.data()), plainLen);
+}

@@ -6,7 +6,16 @@
 .vscode/
 
 # 编译输出
+# 每个项目的 x64/ 输出目录
 x64/
+# 中间文件
+*.recipe
+*.iobj
+*.ipdb
+*.idb
+*.lastbuildstate
+
+# 编译产物（散落在各处的）
 *.exe
 *.pdb
 *.obj
@@ -14,6 +23,8 @@ x64/
 *.log
 *.tlog
 *.exp
+*.lib
+*.dll
 
 # Qt 自动生成
 moc_*.cpp
@@ -23,7 +34,7 @@ qrc_*.cpp
 # 运行时日志
 logs/
 
-# 密钥
+# 敏感配置（不入库）
 config/db.key
 config/db_config.yml
 

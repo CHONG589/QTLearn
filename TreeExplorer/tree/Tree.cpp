@@ -1,6 +1,6 @@
 #include "Tree.h"
-#include "../log/log.h"
-#include "../db/QDBConn.h"
+#include "log/log.h"
+#include "db/QDBConn.h"
 
 static zch::Logger::ptr g_logger = LOG_NAME("default");
 

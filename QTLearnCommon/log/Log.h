@@ -12,7 +12,7 @@
 #include <QElapsedTimer>
 #include <QFileInfo>
 
-#include "src/config/config.h"
+#include "../config/config.h"
 
 /**
  * @brief 获取root日志器

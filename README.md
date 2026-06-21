@@ -20,37 +20,62 @@ crypto_tool\x64\Debug\crypto_tool.exe --genkey
 
 crypto_tool\x64\Debug\crypto_tool.exe --encrypt
 
-# 3. VS 中 F5 运行 QT_Learn
+# 3. VS 中设置 TreeExplorer 为启动项目，F5 运行
 ```
 
 ## 项目结构
 
 ```
-QTLearn/
-├── src/
-│   ├── common/          # 路径与常量（AppPaths.h）
-│   ├── config/          # 配置系统（yaml-cpp + 类型安全 ConfigVar）
-│   ├── crypto/          # AES-256-GCM 加解密
-│   ├── db/              # 数据库连接池 + RAII 事务
-│   ├── log/             # 日志系统（多日志器/输出器/格式模板）
-│   └── tree/            # UI：QTreeView + QAbstractItemModel + 懒加载
-├── crypto_tool/         # 独立加密工具（纯 C++，不依赖 Qt）
-├── config/              # 配置文件（db.key 和 db_config.yml 不入库）
-├── include/
-│   ├── openssl/         # OpenSSL 头文件
-│   └── yaml-cpp/        # Yaml-cpp 头文件
-├── lib/                 # 第三方库
-└── doc/                 # 文档
+├─.claude
+│  ├─agents
+│  ├─commands
+│  └─rules
+├─config                   # 运行时配置（YAML + 密钥文件）
+├─crypto_tool              # 独立控制台工具（复用 QTLearnCommon 的 Crypto 类）
+├─doc
+├─include                  # 第三方头文件
+│  ├─openssl
+│  └─yaml-cpp
+├─lib                      # 第三方库（yaml-cpp, OpenSSL）
+│  ├─Debug
+│  └─Release
+├─logs                     # 运行日志输出目录
+├─QTLearnCommon            # 公共静态库
+│  ├─common                # AppPaths.h
+│  ├─config                # 配置系统
+│  ├─crypto                # 加密模块（std::string 接口）
+│  ├─db                    # 数据库连接池
+│  └─log                   # 日志系统
+├─TreeExplorer             # 业务层 GUI 应用
+│  ├─main.cpp
+│  ├─tree                  # Tree 窗口 + TreeModel + DataManager
+│  └─x64                   # 构建输出（exe 等）
 ```
 
 ## 架构分层
 
+解决方案包含三个项目：
+
+| 项目 | 类型 | 依赖 | 说明 |
+|------|------|------|------|
+| QTLearnCommon | 静态库 .lib | Qt(core;sql), yaml-cpp, OpenSSL | 公共基础设施 |
+| TreeExplorer | GUI .exe | QTLearnCommon, Qt(gui;widgets) | 业务层应用 |
+| crypto_tool | 控制台 .exe | QTLearnCommon, OpenSSL | 独立加密工具 |
+
 ```
-main → Config(加载YAML) → Crypto(加载密钥) → DBPool(连接池) → Tree(UI)
+crypto_tool ──→ QTLearnCommon.lib ←── TreeExplorer
+ (无 Qt)          (仅链接 Crypto.obj)      (链接全部模块)
 ```
 
+### 公共模块 (QTLearnCommon)
+
 - **Config**: `Config::lookup<T>()` 懒注册配置项，支持热更新回调
-- **Crypto**: AES-256-GCM 认证加密，密钥不入库
+- **Crypto**: AES-256-GCM 认证加密，接口使用 `std::string`（与 Qt 解耦），密钥不入库
 - **DBPool**: `QThreadStorage` 每线程独立连接池，`ScopedConn`/`DBTransaction` RAII 管理
 - **Log**: 多日志器 + 文件/标准输出，YAML 配置热更新
-- **Tree**: `TreeModel`(QAbstractItemModel) + `TreeItem`(内存节点) + `DataManager`(DB操作) + 懒加载
+
+### 业务层 (TreeExplorer)
+
+- **Tree窗口**: 承载 QTreeView
+- **TreeModel**: 实现 QAbstractItemModel，支持懒加载、原地编辑、增删节点
+- **DataManager**: 封装所有数据库操作，使用预处理防 SQL 注入

@@ -398,8 +398,8 @@ QSqlDatabase DBPool::createConnection() {
     db.setDatabaseName(g_db_name->getValue());
 
     try {
-        db.setUserName(Crypto::decrypt(g_db_user->getValue()));
-        db.setPassword(Crypto::decrypt(g_db_pwd->getValue()));
+        db.setUserName(QString::fromStdString(Crypto::decrypt(g_db_user->getValue().toStdString())));
+        db.setPassword(QString::fromStdString(Crypto::decrypt(g_db_pwd->getValue().toStdString())));
     } catch (const std::runtime_error &e) {
         throw DBException(QString("Crypto decrypt failed: ") + e.what());
     }

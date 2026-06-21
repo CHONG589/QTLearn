@@ -2,7 +2,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QT_Learn", "QT_Learn.vcxproj", "{97B672BF-D73E-46E3-9FEA-9CB1381851A5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QTLearnCommon", "QTLearnCommon\QTLearnCommon.vcxproj", "{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TreeExplorer", "TreeExplorer\TreeExplorer.vcxproj", "{97B672BF-D73E-46E3-9FEA-9CB1381851A5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crypto_tool", "crypto_tool\crypto_tool.vcxproj", "{F42C113C-5E88-4EAD-9F09-A5AAB067B51D}"
 EndProject
@@ -14,6 +16,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Debug|x64.ActiveCfg = Debug|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Debug|x64.Build.0 = Debug|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Debug|x86.ActiveCfg = Debug|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Debug|x86.Build.0 = Debug|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Release|x64.ActiveCfg = Release|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Release|x64.Build.0 = Release|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Release|x86.ActiveCfg = Release|x64
+		{D4E3F2A1-B6C5-4987-8E9D-0F1A2B3C4D5E}.Release|x86.Build.0 = Release|x64
 		{97B672BF-D73E-46E3-9FEA-9CB1381851A5}.Debug|x64.ActiveCfg = Debug|x64
 		{97B672BF-D73E-46E3-9FEA-9CB1381851A5}.Debug|x64.Build.0 = Debug|x64
 		{97B672BF-D73E-46E3-9FEA-9CB1381851A5}.Debug|x86.ActiveCfg = Debug|x64

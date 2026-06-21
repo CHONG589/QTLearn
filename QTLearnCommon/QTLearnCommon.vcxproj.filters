@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{E1F2A3B4-C5D6-7890-ABCD-EF1234567890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="config">
+      <UniqueIdentifier>{F2A3B4C5-D6E7-8901-BCDE-F12345678901}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto">
+      <UniqueIdentifier>{A3B4C5D6-E7F8-9012-CDEF-123456789012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="db">
+      <UniqueIdentifier>{B4C5D6E7-F8A9-0123-DEF1-234567890123}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{C5D6E7F8-A9B0-1234-EF12-345678901234}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="common\AppPaths.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="config\config.h">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\Crypto.h">
+      <Filter>crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="db\QDBConn.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="log\Log.h">
+      <Filter>log</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="config\config.cpp">
+      <Filter>config</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\Crypto.cpp">
+      <Filter>crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="db\QDBConn.cpp">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="log\Log.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
