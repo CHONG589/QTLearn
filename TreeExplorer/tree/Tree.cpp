@@ -525,6 +525,7 @@ bool ClassModel::canFetchMore(const QModelIndex &parent) const
         : m_rootItem;
 
     if (item->nodeType() == NODE_TYPE_CATEGORY) {
+        // 禁止展开箭头：因为分类下的内容数据量可能很大，且应当由 InfoModel 管理
         return false;
     }
     return !item->isLoaded();
@@ -561,9 +562,11 @@ bool ClassModel::hasChildren(const QModelIndex &parent) const
         return false;
     }
     if (item->isLoaded()) {
+        // 已加载则直接查看 item 下加载的孩子数量
         return item->childCount() > 0;
     }
 
+    // 未加载，则查询数据库
     return DataManager::instance().hasChildren(item->id());
 }
 
@@ -620,7 +623,12 @@ QModelIndex ClassModel::indexFromItem(TreeItem *item) const
 InfoModel::InfoModel(QObject *parent)
     : QAbstractItemModel(parent)
     , m_rootItem(nullptr)
+    , m_categoryId(0)
+    , m_updatingCheckState(false)
 {
+    // 因为 InfoTree 初始化时不需要显示什么，在点击对应的分类时，这个树才需要进行显示内容，
+    // 所以在刚开始，这个树先弄一个空的树，啥都不显示，直接设置为已加载，实际啥都没有，在点击
+    // 对应的分类节点后，再把这个空树删掉，且释放，视图刷新为最新点击的内容
     m_rootItem = new TreeItem(0, "", NODE_TYPE_CONTENT, nullptr);
     m_rootItem->setLoaded(true);
 }
@@ -1151,12 +1159,9 @@ void Tree::onCategoryClicked(const QModelIndex &index)
     }
 
     TreeItem *item = static_cast<TreeItem *>(index.internalPointer());
-    LOG_INFO(g_logger) << "onCategoryClicked: name=" << (item ? item->name() : "null")
-                       << " nodeType=" << (item ? item->nodeType() : -1)
-                       << " id=" << (item ? item->id() : -1);
 
     if (!item || item->nodeType() != NODE_TYPE_CATEGORY) {
-        LOG_INFO(g_logger) << "onCategoryClicked: skipped (nodeType != NODE_TYPE_CATEGORY)";
+        LOG_DEBUG(g_logger) << "onCategoryClicked: skipped (nodeType != NODE_TYPE_CATEGORY)";
         return;
     }
 

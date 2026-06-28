@@ -149,7 +149,7 @@ private:
     QList<TreeItem *> m_children;               ///< 子节点列表，析构时通过 qDeleteAll 递归释放
     TreeItem *m_parent;                         ///< 父节点指针（不作为所有者），根节点为 nullptr
     bool m_loaded;                              ///< 子节点是否已从数据库加载
-    Qt::CheckState m_checkState = Qt::Unchecked;///< 勾选状态（仅 InfoModel 使用，ClassModel 忽略）
+    Qt::CheckState m_checkState;                ///< 勾选状态（仅 InfoModel 使用，ClassModel 忽略）
 };
 
 // ============================================================
@@ -467,9 +467,9 @@ public:
 
 private:
     TreeItem *m_rootItem;                       ///< 不可见的虚拟根节点，其子节点为顶层内容节点
-    qlonglong m_categoryId = 0;                 ///< 当前加载的分类节点 ID，0 表示未加载
+    qlonglong m_categoryId;                     ///< 当前加载的分类节点 ID，0 表示未加载
     QString m_categoryName;                     ///< 当前加载的分类名称
-    bool m_updatingCheckState = false;          ///< 批量更新标志，防止 setData 中递归触发勾选联动
+    bool m_updatingCheckState;                  ///< 批量更新标志，防止 setData 中递归触发勾选联动
 
     /**
      * @brief 从数据库加载指定内容节点的子节点
