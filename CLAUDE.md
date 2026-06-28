@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Qt 6.5.3 学习项目，Windows 平台，Visual Studio 2022 + Qt VS Tools 构建。实现了一个数据库驱动的树形控件演示程序，公共模块（配置系统、加密模块、数据库连接池、日志系统）位于独立静态库项目 QTLearnCommon 中。
+Qt 6.5.3 学习项目，Windows 平台，Visual Studio 2022 + Qt VS Tools 构建。实现了一个数据库驱动的公司组织架构树形控件演示程序（部门 → 分类 → 内容三层结构），公共模块（配置系统、加密模块、数据库连接池、日志系统）位于独立静态库项目 QTLearnCommon 中。
 
 ## 构建与环境
 
@@ -27,7 +27,9 @@ QTLearnCommon/ (公共静态库)
 
 TreeExplorer/ (业务层 GUI)
 ├── main.cpp            → 入口：Config::loadFromConfDir → Crypto::loadKey → Tree窗口
-└── tree/               → UI 层：Tree 窗口 + TreeModel + TreeItem + DataManager
+└── tree/               → UI 层：Tree 窗口 + ClassModel + InfoModel + TreeItem + DataManager
+    ├── code_review.md  → 代码审查报告
+    └── QTreeView_Model_Guide.md → QTreeView+QAbstractItemModel 技术文档
 
 crypto_tool/ (独立控制台工具)
 └── crypto_tool.cpp     → 委托 QTLearnCommon 的 Crypto 类，自身仅负责控制台交互
@@ -39,9 +41,14 @@ crypto_tool/ (独立控制台工具)
 
 2. **加密层** (`QTLearnCommon/crypto/`)：`Crypto` 纯静态类，基于 OpenSSL EVP API 实现 AES-256-GCM 认证加密。接口使用 `std::string`（与 Qt 解耦，crypto_tool 无需链接 Qt）。密钥从 `config/db.key`（64 位十六进制）加载。加密输出格式：`Base64(IV 12字节 + 密文 + GCM Tag 16字节)`。数据库配置中的 `user` 和 `pwd` 字段经加密后写入 YAML，运行时解密。
 
-3. **UI 层** (`TreeExplorer/tree/`)：`Tree` 是主窗口（包含 `QTreeView`），`TreeModel` 实现 `QAbstractItemModel`（懒加载 + 编辑），`TreeItem` 是内存树节点，`DataManager` 封装所有 DB 操作（单例）。`Node` 是数据库查询结果的 DTO。
+3. **UI 层** (`TreeExplorer/tree/`)：`Tree` 是主窗口，包含双 `QTreeView`（`treeView_Class` 部门分类树 + `treeView_Info` 内容树）、六个操作按钮和一个 `textEdit`。两个 Model 均实现 `QAbstractItemModel`：
+   - `ClassModel`：展示部门层级和分类叶子节点，懒加载，点击分类触发内容加载
+   - `InfoModel`：展示内容树，支持勾选框 + 父子勾选联动（Checked/PartiallyChecked/Unchecked），通过 `m_updatingCheckState` 防止递归
+   - `TreeItem`：内存树节点（id/name/nodeType/children/checkState），`qDeleteAll` 递归释放
+   - `DataManager`：单例封装 `org_tree` 表 CRUD 操作，预处理防注入
+   - `Node`：DTO（id/name/nodeType/sortOrder）
 
-4. **数据库层** (`QTLearnCommon/db/`)：自建连接池 `DBPool`（单例），基于 `QThreadStorage` 实现每线程独立连接池，避免 `QSqlDatabase` 跨线程使用问题。`DBConn` 封装 `QSqlDatabase` 操作，支持预处理、流式查询、事务。`ScopedConn` 通过 RAII 自动获取/归还连接。`DBTransaction` 通过 RAII 自动提交/回滚。所有数据库错误通过 `DBException` 抛出。
+4. **数据库层** (`QTLearnCommon/db/`)：自建连接池 `DBPool`（单例），基于 `QThreadStorage` 实现每线程独立连接池，避免 `QSqlDatabase` 跨线程使用问题。`DBConn` 封装 `QSqlDatabase` 操作，支持预处理、流式查询、事务。`ScopedConn` 通过 RAII 自动获取/归还连接。`DBTransaction` 通过 RAII 自动提交/回滚。所有数据库错误通过 `DBException` 抛出。业务数据表 `org_tree`（id/name/node_type/parent_id/sort_order），节点类型常量 `NODE_TYPE_DEPT=0`/`NODE_TYPE_CATEGORY=1`/`NODE_TYPE_CONTENT=2`，建表脚本位于 `sql/org_tree_init.sql`。
 
 5. **日志层** (`QTLearnCommon/log/`)：`LoggerManager` 单例管理所有 `Logger` 实例，每个 `Logger` 持有日志级别和一组 `LogAppender`。`LogFormatter` 解析格式模板字符串（`%d`、`%p`、`%f` 等占位符），将 `LogEvent` 格式化为文本。内置两种输出器：`StdoutLogAppender`（标准输出）和 `FileLogAppender`（文件输出，按天滚动 + 每 3 秒 reopen）。通过 `LogEventWrap` RAII 对象 + 宏实现流式 API。
 
@@ -57,6 +64,9 @@ crypto_tool/ (独立控制台工具)
 - 日志器在头文件中使用 `LOG_*()` 宏时，用 `LOG_ROOT()` 代替文件级 `g_logger`，避免头文件中的静态变量定义冲突。
 - `Crypto` 接口使用 `std::string`，与 Qt 解耦。QT_Learn 中调用时通过 `QString::fromStdString()` / `.toStdString()` 转换。crypto_tool 直接调用无需 Qt。
 - `Tree.qrc` 中未添加图标资源文件，默认使用 `:/icons/folder.png` 和 `:/icons/file.png` 路径。
+- **双 Model 设计**：`ClassModel`（无勾选框，点击分类加载内容）和 `InfoModel`（有勾选框，父子联动），各司其职而非合并为一个通用 Model。
+- **勾选联动**：`setData` 中通过 `m_updatingCheckState` 标志位防递归，`setChildrenCheckState` 向下同步 + `updateAncestorCheckStates` 向上更新三态。
+- **内容树默认展开**：`onCategoryClicked` 中 `loadCategory` 后调用 `treeView_Info->expandAll()`，触发链式懒加载。
 
 ## 配置使用
 
@@ -140,6 +150,8 @@ LOG_ERROR(g_logger) << "error message";
 │  ├─Debug
 │  └─Release
 ├─logs                     # 运行日志输出目录
+├─sql                      # 数据库脚本
+│  └─org_tree_init.sql     # 建表 + 测试数据
 ├─QTLearnCommon            # 公共静态库
 │  ├─common                # AppPaths.h
 │  ├─config                # 配置系统
@@ -148,6 +160,8 @@ LOG_ERROR(g_logger) << "error message";
 │  └─log                   # 日志系统
 ├─TreeExplorer             # 业务层 GUI 应用
 │  ├─main.cpp
-│  ├─tree                  # Tree 窗口 + TreeModel + DataManager
+│  ├─tree                  # Tree 窗口 + ClassModel + InfoModel + TreeItem + DataManager
+│  │   ├─code_review.md
+│  │   └─QTreeView_Model_Guide.md
 │  └─x64                   # 构建输出（exe 等）
 ```

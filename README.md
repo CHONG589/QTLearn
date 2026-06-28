@@ -1,6 +1,6 @@
 # QTLearn
 
-Qt 6.5.3 学习项目，实现了一个数据库驱动的树形控件演示程序，包含自建的配置系统、AES-256-GCM 加密模块、数据库连接池和日志系统。
+Qt 6.5.3 学习项目，实现了一个数据库驱动的公司组织架构树形控件演示程序（部门 → 分类 → 内容三层结构），包含自建的配置系统、AES-256-GCM 加密模块、数据库连接池和日志系统。
 
 ## 环境
 
@@ -20,7 +20,10 @@ crypto_tool\x64\Debug\crypto_tool.exe --genkey
 
 crypto_tool\x64\Debug\crypto_tool.exe --encrypt
 
-# 3. VS 中设置 TreeExplorer 为启动项目，F5 运行
+# 3. 在 MySQL 中执行建表和数据脚本
+#     mysql> source E:/Code/QTCode/QTLearn/sql/org_tree_init.sql
+
+# 4. VS 中设置 TreeExplorer 为启动项目，F5 运行
 ```
 
 ## 项目结构
@@ -40,6 +43,8 @@ crypto_tool\x64\Debug\crypto_tool.exe --encrypt
 │  ├─Debug
 │  └─Release
 ├─logs                     # 运行日志输出目录
+├─sql                      # 数据库脚本
+│  └─org_tree_init.sql     # 建表 + 测试数据
 ├─QTLearnCommon            # 公共静态库
 │  ├─common                # AppPaths.h
 │  ├─config                # 配置系统
@@ -48,8 +53,9 @@ crypto_tool\x64\Debug\crypto_tool.exe --encrypt
 │  └─log                   # 日志系统
 ├─TreeExplorer             # 业务层 GUI 应用
 │  ├─main.cpp
-│  ├─tree                  # Tree 窗口 + TreeModel + DataManager
-│  └─x64                   # 构建输出（exe 等）
+│  └─tree                  # Tree 窗口 + ClassModel + InfoModel + TreeItem + DataManager
+│     ├─code_review.md     # 代码审查报告
+│     └─QTreeView_Model_Guide.md  # QTreeView+Model 技术文档
 ```
 
 ## 架构分层
@@ -76,6 +82,11 @@ crypto_tool ──→ QTLearnCommon.lib ←── TreeExplorer
 
 ### 业务层 (TreeExplorer)
 
-- **Tree窗口**: 承载 QTreeView
-- **TreeModel**: 实现 QAbstractItemModel，支持懒加载、原地编辑、增删节点
-- **DataManager**: 封装所有数据库操作，使用预处理防 SQL 注入
+- **Tree 窗口**: 承载 `treeView_Class`（部门分类树）和 `treeView_Info`（内容树）+ 六个操作按钮 + `textEdit`
+- **ClassModel**: 实现 `QAbstractItemModel`，展示部门层级 + 分类叶子节点，点击分类自动加载内容
+- **InfoModel**: 实现 `QAbstractItemModel`，展示内容树，支持勾选框 + 父子勾选联动（全选/半选/取消）
+- **TreeItem**: 内存树节点，维护父子关系、懒加载状态、勾选状态
+- **DataManager**: 单例，封装对 `org_tree` 表的全部数据库操作，使用预处理防 SQL 注入
+- **数据库表**: `org_tree`（id/name/node_type/parent_id/sort_order），废弃旧 `tree_nodes` 表
+
+详见 `TreeExplorer/tree/QTreeView_Model_Guide.md`。
