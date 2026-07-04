@@ -8,6 +8,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TreeExplorer", "TreeExplore
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crypto_tool", "crypto_tool\crypto_tool.vcxproj", "{F42C113C-5E88-4EAD-9F09-A5AAB067B51D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{3DF25980-F76D-47E8-9096-8565435C052D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -40,6 +42,14 @@ Global
 		{F42C113C-5E88-4EAD-9F09-A5AAB067B51D}.Release|x64.Build.0 = Release|x64
 		{F42C113C-5E88-4EAD-9F09-A5AAB067B51D}.Release|x86.ActiveCfg = Release|Win32
 		{F42C113C-5E88-4EAD-9F09-A5AAB067B51D}.Release|x86.Build.0 = Release|Win32
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Debug|x64.ActiveCfg = Debug|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Debug|x64.Build.0 = Debug|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Debug|x86.ActiveCfg = Debug|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Debug|x86.Build.0 = Debug|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Release|x64.ActiveCfg = Release|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Release|x64.Build.0 = Release|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Release|x86.ActiveCfg = Release|x64
+		{3DF25980-F76D-47E8-9096-8565435C052D}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
