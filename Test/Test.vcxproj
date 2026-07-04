@@ -112,16 +112,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <QtRcc Include="Test.qrc" />
-    <QtUic Include="Test.ui" />
-    <QtMoc Include="Test.h" />
-    <ClCompile Include="Test.cpp" />
+    <ClCompile Include="test\Test.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\QTLearnCommon\QTLearnCommon.vcxproj">
       <Project>{d4e3f2a1-b6c5-4987-8e9d-0f1a2b3c4d5e}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="test\Test.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="test\Test.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="test\Test.ui" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

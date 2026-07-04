@@ -1,4 +1,4 @@
-﻿#include "Test.h"
+﻿#include "test/Test.h"
 #include <QtWidgets/QApplication>
 
 #include <QSplitter>
