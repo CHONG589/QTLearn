@@ -5,11 +5,39 @@
 #include <QIcon>
 
 #include "ui_Tree.h"
+#include <QAction>
+#include <QStyledItemDelegate>
+#include <QLineEdit>
 
 // 节点类型常量
 constexpr int NODE_TYPE_DEPT    = 0;  ///< 部门节点
 constexpr int NODE_TYPE_CATEGORY = 1;  ///< 分类节点
 constexpr int NODE_TYPE_CONTENT = 2;  ///< 内容节点
+
+// ============================================================
+// ReadOnlyEditDelegate — 只读编辑器代理，支持文字拖选复制
+// ============================================================
+class ReadOnlyEditDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    /**
+     * @brief 创建只读 QLineEdit 编辑器
+     * @param[in] parent 父控件指针
+     * @return 返回只读 QLineEdit 指针，用户可在其中拖选文字并复制
+     * @details 编辑器设为只读，仅允许选择和复制文字，不允许修改。
+     *          通过样式表添加蓝色边框以区分编辑模式和普通显示模式。
+     */
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const override;
+
+    /**
+     * @brief 阻止编辑器数据写回模型
+     * @details 编辑器为只读模式，此方法为空实现，防止失去焦点时
+     *          意外将数据写回模型。
+     */
+    void setModelData(QWidget *, QAbstractItemModel *, const QModelIndex &) const override;
+};
 
 // ============================================================
 // Node — 数据库查询结果 DTO
@@ -280,6 +308,17 @@ public:
      * @details 部门分类树不包含勾选框，因此不加 Qt::ItemIsUserCheckable
      */
     Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+    /**
+     * @brief 拒绝编辑操作（部门分类树仅支持文字复制，不支持修改）
+     * @param[in] index 节点索引
+     * @param[in] value 新值
+     * @param[in] role 数据角色
+     * @return 始终返回 false，拒绝所有编辑
+     * @details 部门分类树允许进入编辑模式仅用于文字拖选复制，
+     *          不允许实际修改节点名称。
+     */
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
     /**
      * @brief 判断节点是否还有更多子节点可加载
@@ -569,10 +608,26 @@ private slots:
      */
     void onCancel();
 
+    /**
+     * @brief 响应树形视图的自定义上下文菜单请求
+     * @param[in] pos 右键点击在视图视口中的坐标
+     * @details 获取点击位置对应的树节点，若合法则弹出包含"复制"操作的右键菜单。
+     *          由 treeView_Class 和 treeView_Info 的 customContextMenuRequested 信号触发。
+     */
+    void onShowContextMenu(const QPoint &pos);
+
+    /**
+     * @brief 复制当前选中节点的显示名称到系统剪贴板
+     * @details 响应 m_copyAction（Ctrl+C）的 triggered 信号。
+     *          根据焦点所在的树形视图获取选中节点，委托给 copyFromTreeView 执行。
+     */
+    void onCopyItem();
+
 private:
     Ui::TreeClass m_ui;                 ///< Qt Designer 生成的 UI 布局
     ClassModel *m_classModel;           ///< 左侧部门分类树的模型（由 Qt 父子机制管理生命周期）
     InfoModel  *m_infoModel;            ///< 右侧内容树的模型（由 Qt 父子机制管理生命周期）
+    QAction *m_copyAction;              ///< "复制"动作，绑定 Ctrl+C 快捷键，由两个树形视图共享
 
     /**
      * @brief 将 treeView_Info 中已勾选的内容格式化为 ASCII 树状文本
@@ -589,4 +644,13 @@ private:
      *          重复添加同一分类时会先移除旧块再追加新块
      */
     void appendToTextEdit(const QString &categoryName, const QString &treeText);
+
+    /**
+     * @brief 从指定树形视图的当前选中节点复制显示名称到系统剪贴板
+     * @param[in] treeView 目标树形视图指针
+     * @details 通过模型层公有 API（data/DisplayRole）获取节点名称，
+     *          不依赖具体模型类型（ClassModel / InfoModel 均可）。
+     *          无选中节点或名称为空时静默返回。
+     */
+    void copyFromTreeView(QTreeView *treeView);
 };

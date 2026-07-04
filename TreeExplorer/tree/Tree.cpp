@@ -3,8 +3,39 @@
 #include "db/QDBConn.h"
 #include <functional>
 #include <QPushButton>
+#include <QClipboard>
+#include <QMenu>
 
 static zch::Logger::ptr g_logger = LOG_NAME("default");
+
+// ============================================================
+// ReadOnlyEditDelegate 实现
+// ============================================================
+
+/**
+ * @brief 创建只读 QLineEdit 编辑器
+ * @param[in] parent 父控件指针
+ * @param[in] option 视图项样式选项（未使用）
+ * @param[in] index 模型索引（未使用）
+ * @return 返回只读 QLineEdit 指针
+ * @details 编辑器设为只读（setReadOnly），用户仅能选择和复制文字。
+ *          通过样式表添加蓝色细边框，视觉上区分编辑模式与普通选中状态。
+ */
+QWidget *ReadOnlyEditDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const
+{
+    QLineEdit *editor = new QLineEdit(parent);
+    editor->setReadOnly(true);
+    editor->setStyleSheet("QLineEdit { background: white; border: 1px solid #3399FF; border-radius: 2px; padding: 1px 3px; }");
+    return editor;
+}
+
+/**
+ * @brief 阻止编辑器数据写回模型（只读编辑器无需写回）
+ */
+void ReadOnlyEditDelegate::setModelData(QWidget *, QAbstractItemModel *, const QModelIndex &) const
+{
+    // 只读编辑器，不写回任何数据
+}
 
 // ============================================================
 // TreeItem 实现
@@ -484,7 +515,7 @@ QVariant ClassModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    if (role == Qt::DisplayRole) {
+    if (role == Qt::DisplayRole || role == Qt::EditRole) {
         return item->name();
     }
     if (role == Qt::DecorationRole) {
@@ -500,15 +531,33 @@ QVariant ClassModel::data(const QModelIndex &index, int role) const
 /**
  * @brief 获取节点标志位
  * @param[in] index 节点索引
- * @return 有效节点返回 启用|可选；无效索引返回 NoItemFlags
- * @details 部门分类树不包含勾选框，因此不加 Qt::ItemIsUserCheckable
+ * @return 有效节点返回 启用|可选|可编辑；无效索引返回 NoItemFlags
+ * @details 部门分类树不包含勾选框，因此不加 Qt::ItemIsUserCheckable。
+ *          Qt::ItemIsEditable 仅用于支持进入编辑模式后文字拖选复制，
+ *          实际修改操作被 setData 拒绝。
  */
 Qt::ItemFlags ClassModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid()) {
         return Qt::NoItemFlags;
     }
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable;
+}
+
+/**
+ * @brief 拒绝编辑操作（部门分类树仅支持文字复制，不支持修改）
+ * @param[in] index 节点索引
+ * @param[in] value 新值
+ * @param[in] role 数据角色
+ * @return 始终返回 false，拒绝所有编辑
+ * @details 编辑模式仅用于文字拖选复制，不允许实际修改节点名称
+ */
+bool ClassModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    Q_UNUSED(index);
+    Q_UNUSED(value);
+    Q_UNUSED(role);
+    return false;
 }
 
 /**
@@ -724,7 +773,7 @@ QVariant InfoModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    if (role == Qt::DisplayRole) {
+    if (role == Qt::DisplayRole || role == Qt::EditRole) {
         return item->name();
     }
     if (role == Qt::CheckStateRole) {
@@ -736,19 +785,20 @@ QVariant InfoModel::data(const QModelIndex &index, int role) const
 /**
  * @brief 获取节点标志位
  * @param[in] index 节点索引
- * @return 有效节点返回 启用|可选|可勾选；无效索引返回 NoItemFlags
- * @details 内容树需要勾选框，因此加入 Qt::ItemIsUserCheckable
+ * @return 有效节点返回 启用|可选|可勾选|可编辑；无效索引返回 NoItemFlags
+ * @details Qt::ItemIsEditable 仅用于支持进入编辑模式后文字拖选复制，
+ *          实际修改操作被 setData 拒绝。
  */
 Qt::ItemFlags InfoModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid()) {
         return Qt::NoItemFlags;
     }
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable;
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable | Qt::ItemIsEditable;
 }
 
 /**
- * @brief 修改节点数据（处理勾选状态变更）
+ * @brief 修改节点数据（处理勾选状态变更，拒绝文字编辑）
  * @param[in] index 节点索引
  * @param[in] value 新值
  * @param[in] role 数据角色，仅处理 Qt::CheckStateRole
@@ -1132,6 +1182,39 @@ Tree::Tree(QWidget *parent)
             this, &Tree::onOK);
     connect(m_ui.pushButton_Cancel, &QPushButton::clicked,
             this, &Tree::onCancel);
+
+    // ---- 复制功能：Ctrl+C 快捷键 + 右键上下文菜单 ----
+
+    // 创建复制动作并绑定 Ctrl+C 快捷键
+    m_copyAction = new QAction(QStringLiteral("复制"), this);
+    m_copyAction->setShortcut(QKeySequence::Copy);
+
+    // 将动作添加到两个树形视图，使 Ctrl+C 仅在树形视图获得焦点时生效
+    m_ui.treeView_Class->addAction(m_copyAction);
+    m_ui.treeView_Info->addAction(m_copyAction);
+
+    connect(m_copyAction, &QAction::triggered,
+            this, &Tree::onCopyItem);
+
+    // 启用自定义上下文菜单
+    m_ui.treeView_Class->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_ui.treeView_Info->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    connect(m_ui.treeView_Class, &QTreeView::customContextMenuRequested,
+            this, &Tree::onShowContextMenu);
+    connect(m_ui.treeView_Info, &QTreeView::customContextMenuRequested,
+            this, &Tree::onShowContextMenu);
+
+    // ---- 文字拖选复制：只读编辑模式 ----
+
+    // 双击进入编辑模式，显示只读文本框供文字拖选复制
+    m_ui.treeView_Class->setEditTriggers(QAbstractItemView::DoubleClicked);
+    m_ui.treeView_Info->setEditTriggers(QAbstractItemView::DoubleClicked);
+
+    // 设置只读编辑器代理：进入编辑模式后，文字可拖选和复制但不可修改
+    auto *delegate = new ReadOnlyEditDelegate(this);
+    m_ui.treeView_Class->setItemDelegate(delegate);
+    m_ui.treeView_Info->setItemDelegate(delegate);
 }
 
 /**
@@ -1233,6 +1316,77 @@ void Tree::onOK()
 void Tree::onCancel()
 {
     this->close();
+}
+
+/**
+ * @brief 响应树形视图的自定义上下文菜单请求
+ * @param[in] pos 右键点击在视图视口中的坐标
+ * @details 使用 sender() 确定触发菜单的树形视图，通过 indexAt 获取右键位置的树节点。
+ *          仅合法节点位置弹出菜单；空白区域右键无响应。
+ *          菜单中的"复制"动作通过 lambda 捕获正确的 treeView 指针，
+ *          避免焦点状态在菜单弹出期间变化导致的误判。
+ */
+void Tree::onShowContextMenu(const QPoint &pos)
+{
+    QTreeView *treeView = qobject_cast<QTreeView *>(sender());
+    if (!treeView) {
+        return;
+    }
+
+    QModelIndex index = treeView->indexAt(pos);
+    if (!index.isValid()) {
+        return;
+    }
+
+    treeView->setCurrentIndex(index);
+
+    QMenu menu(this);
+    QAction *act = menu.addAction(QStringLiteral("复制"));
+    connect(act, &QAction::triggered, this, [this, treeView]() {
+        copyFromTreeView(treeView);
+    });
+    menu.exec(treeView->viewport()->mapToGlobal(pos));
+}
+
+/**
+ * @brief 复制当前选中节点的显示名称到系统剪贴板
+ * @details 响应 Ctrl+C 快捷键。根据焦点所在的树形视图确定复制来源，
+ *          委托给 copyFromTreeView 执行实际复制操作。
+ */
+void Tree::onCopyItem()
+{
+    if (m_ui.treeView_Class->hasFocus()) {
+        copyFromTreeView(m_ui.treeView_Class);
+    } else if (m_ui.treeView_Info->hasFocus()) {
+        copyFromTreeView(m_ui.treeView_Info);
+    }
+}
+
+/**
+ * @brief 从指定树形视图的当前选中节点复制显示名称到系统剪贴板
+ * @param[in] treeView 目标树形视图指针
+ * @details 通过模型层 QAbstractItemModel::data(DisplayRole) 获取节点名称。
+ *          此方法不依赖具体模型类型——ClassModel 和 InfoModel 均在 DisplayRole
+ *          下返回 TreeItem::name()，因此一个实现即可覆盖两个树形视图。
+ *          无选中节点、索引无效或名称为空时静默返回不报错。
+ */
+void Tree::copyFromTreeView(QTreeView *treeView)
+{
+    if (!treeView) {
+        return;
+    }
+
+    QModelIndex index = treeView->currentIndex();
+    if (!index.isValid()) {
+        return;
+    }
+
+    QString text = treeView->model()->data(index, Qt::DisplayRole).toString();
+    if (text.isEmpty()) {
+        return;
+    }
+
+    QApplication::clipboard()->setText(text);
 }
 
 // ---- 私有辅助方法 ----
